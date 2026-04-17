@@ -16,10 +16,9 @@
 1. 复制配置：`cp .env.example .env`
 2. 启动服务：`docker compose up --build`
 3. 打开前端：`http://localhost:4173`
-4. 后端接口：`http://localhost:8080/api/v1`
-5. MinIO 控制台：`http://localhost:9001`
-6. 如果本机端口冲突，可在 `.env` 中覆盖 `WEB_HOST_PORT`、`API_HOST_PORT`、`MINIO_API_PORT`、`MINIO_CONSOLE_PORT`
-7. 如果你所在网络对 Go 官方源不稳定，可在 `.env` 中覆盖 `GO_PROXY_PRIMARY`、`GO_PROXY_SECONDARY`、`GO_SUMDB`
+4. API 和 MinIO 默认仅在 Compose 内部网络访问，由 `web` 同源代理 `/api`
+5. 如果本机端口冲突，可在 `.env` 中覆盖 `WEB_HOST_PORT`
+6. 如果你所在网络对 Go 官方源不稳定，可在 `.env` 中覆盖 `GO_PROXY_PRIMARY`、`GO_PROXY_SECONDARY`、`GO_SUMDB`
 
 ## 本地开发
 - 后端：`cd apps/api && go run ./cmd/server`

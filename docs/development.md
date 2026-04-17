@@ -36,7 +36,7 @@ pnpm --dir apps/web test:e2e
 - `ADMIN_PASSWORD`：管理态口令
 - `AUTH_SECRET`：Cookie 签名密钥
 - `MINIO_ENDPOINT` / `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`：MinIO 参数
-- `WEB_HOST_PORT` / `API_HOST_PORT` / `MINIO_API_PORT` / `MINIO_CONSOLE_PORT`：Compose 宿主机端口映射
+- `WEB_HOST_PORT`：Compose 对外暴露的前端宿主机端口
 
 ## 开发约束
 - 新增函数尽量控制在 30 行内

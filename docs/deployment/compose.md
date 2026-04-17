@@ -7,6 +7,8 @@
 - `api`：提供 `REST API`
 - `web`：提供 Apple 风格 Web 界面，并同源反向代理 `/api`
 
+默认只暴露 `web` 容器的宿主机端口，`postgres`、`minio`、`api` 仅在 Compose 内部网络访问。
+
 启动命令：
 ```bash
 docker compose up --build
@@ -28,19 +30,15 @@ docker compose up --build
 
 ## 局域网访问
 - Web：`http://<你的机器局域网IP>:4173`
-- API：`http://<你的机器局域网IP>:8080/api/v1`
-- MinIO 控制台：`http://<你的机器局域网IP>:9001`
+- API：默认不映射宿主机端口，由 `web` 同源代理 `/api`
+- MinIO：默认不映射宿主机端口，仅供内部服务使用
 
 ## 端口冲突处理
-- 如果宿主机 `4173`、`8080`、`9000` 或 `9001` 已被占用，可在 `.env` 中覆盖：
+- 如果宿主机 `4173` 已被占用，可在 `.env` 中覆盖：
   - `WEB_HOST_PORT`
-  - `API_HOST_PORT`
-  - `MINIO_API_PORT`
-  - `MINIO_CONSOLE_PORT`
-- 例如把 MinIO 改到 `9100/9101`：
+- 例如改成 `8081`：
 ```bash
-MINIO_API_PORT=9100
-MINIO_CONSOLE_PORT=9101
+WEB_HOST_PORT=8081
 ```
 
 ## 持久化目录

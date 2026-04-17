@@ -21,9 +21,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     volumes:
       - ./data/minio:/data
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
 
   api:
     build:
@@ -50,8 +47,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-    ports:
-      - "${API_HOST_PORT:-8080}:8080"
 
   web:
     build:

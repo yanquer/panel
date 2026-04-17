@@ -6,6 +6,7 @@
 ### 变更
 - API Docker 构建新增双 Go 模块镜像源回退链，并支持通过 Compose build args 覆盖镜像地址与 `GOSUMDB`
 - README、开发文档和 Compose 部署文档补充 Go 依赖镜像配置说明
+- Compose 默认只保留 `web` 容器的宿主机端口映射，`api` 与 `minio` 改为仅内部网络访问
 
 ## 2026-04-17
 
