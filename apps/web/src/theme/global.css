@@ -1,0 +1,470 @@
+/* 全局样式文件用于定义 Apple 风格的页面骨架、组件基线和响应式布局规则。 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    var(--hero-glow),
+    var(--bg-canvas);
+  color: var(--text-primary);
+  transition:
+    background var(--motion-base) ease,
+    color var(--motion-base) ease;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.app {
+  padding: var(--space-4);
+}
+
+.shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-5);
+  border: 1px solid var(--border-soft);
+  border-radius: 32px;
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg-card));
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--blur-panel);
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: auto -8% -38% 46%;
+  height: 280px;
+  background: radial-gradient(circle, var(--accent-soft), transparent 66%);
+  pointer-events: none;
+}
+
+.hero__bar,
+.hero__stats,
+.workspace,
+.workspace__main,
+.panel,
+.segmented,
+.detail,
+.empty,
+.preview {
+  display: grid;
+}
+
+.hero__bar {
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.hero__eyebrow,
+.meta-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.hero__title {
+  max-width: 12ch;
+  margin: 0.6rem 0 0;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+}
+
+.hero__summary {
+  max-width: 34rem;
+  margin: 1rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.hero__stats {
+  justify-items: end;
+  gap: 0.9rem;
+}
+
+.hero__stat {
+  min-width: 11rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  background: var(--bg-subtle);
+}
+
+.hero__stat strong {
+  display: block;
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+}
+
+.workspace {
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 360px);
+  gap: var(--space-4);
+}
+
+.workspace__main {
+  gap: var(--space-3);
+}
+
+.panel,
+.detail,
+.empty,
+.preview {
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-soft);
+  border-radius: 28px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.panel--glass,
+.detail--glass {
+  background: var(--bg-panel);
+  backdrop-filter: var(--blur-panel);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toolbar__right,
+.segmented,
+.asset-row,
+.asset-card__meta,
+.detail__actions,
+.composer__actions,
+.unlock__actions,
+.asset-grid {
+  display: flex;
+}
+
+.toolbar__right,
+.composer__actions,
+.unlock__actions,
+.detail__actions {
+  gap: 0.75rem;
+}
+
+.segmented {
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+}
+
+.segmented button,
+.button,
+.input,
+.textarea,
+.dropzone {
+  transition:
+    transform var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.segmented button,
+.button {
+  border: 0;
+  border-radius: 999px;
+}
+
+.segmented button {
+  padding: 0.7rem 1rem;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.segmented button[data-active='true'] {
+  color: var(--text-primary);
+  background: var(--bg-card);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+
+.button {
+  padding: 0.8rem 1.15rem;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+
+.button--primary {
+  color: white;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent), white 8%), var(--accent));
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.button--danger {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(217, 84, 101, 0.96), rgba(197, 56, 78, 0.96));
+}
+
+.button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):hover,
+.segmented button:hover,
+.dropzone:hover {
+  transform: translateY(-1px);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.input {
+  min-height: 48px;
+  padding: 0 1rem;
+}
+
+.textarea {
+  min-height: 144px;
+  padding: 1rem;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border-soft));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.dropzone {
+  min-height: 180px;
+  padding: var(--space-3);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 28px;
+  background: linear-gradient(180deg, var(--bg-subtle), transparent);
+  align-content: center;
+  gap: 0.85rem;
+}
+
+.asset-grid {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.asset-card,
+.asset-row {
+  position: relative;
+  gap: 0.9rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  background: var(--bg-card);
+}
+
+.asset-card {
+  width: min(100%, calc(50% - 0.5rem));
+  padding: 1rem;
+  flex-direction: column;
+}
+
+.asset-row {
+  padding: 1rem 1.1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.asset-card__thumb,
+.preview__image {
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--bg-strong);
+}
+
+.asset-card__thumb {
+  aspect-ratio: 1.2;
+}
+
+.asset-card__thumb img,
+.preview__image img,
+.preview__image iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.asset-card__snippet {
+  min-height: 8rem;
+  padding: 1.1rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, var(--bg-subtle), transparent);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.asset-card__header,
+.asset-card__meta,
+.detail__meta,
+.detail__property {
+  display: grid;
+}
+
+.asset-card__header,
+.detail__property {
+  gap: 0.35rem;
+}
+
+.asset-card__meta {
+  gap: 0.2rem;
+}
+
+.asset-title,
+.detail__title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.asset-subtitle,
+.detail__description,
+.muted {
+  color: var(--text-secondary);
+}
+
+.preview__image {
+  min-height: 240px;
+}
+
+.detail__meta {
+  gap: 0.75rem;
+}
+
+.detail__property {
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.empty {
+  min-height: 18rem;
+  align-content: center;
+  justify-items: start;
+}
+
+.empty__glyph {
+  width: 3.2rem;
+  height: 3.2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.5rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.status-pill::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent), white 10%);
+}
+
+.toast {
+  padding: 0.95rem 1rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1120px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .detail {
+    order: 3;
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    padding: 1rem;
+  }
+
+  .hero {
+    padding: 1.5rem;
+  }
+
+  .hero__bar {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__stats {
+    justify-items: start;
+  }
+
+  .asset-card {
+    width: 100%;
+  }
+
+  .toolbar,
+  .toolbar__right,
+  .detail__actions,
+  .composer__actions,
+  .unlock__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

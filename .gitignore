@@ -1,0 +1,15 @@
+node_modules
+apps/web/node_modules
+apps/web/dist
+apps/web/playwright-report
+apps/web/test-results
+apps/web/.vite
+apps/web/coverage
+apps/api/bin
+apps/api/.cache
+.DS_Store
+.env
+.env.*
+!.env.example
+data/postgres
+data/minio

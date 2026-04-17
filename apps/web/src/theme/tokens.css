@@ -1,0 +1,52 @@
+/* 主题令牌文件用于定义 Apple 风格浅深色设计 token，解决组件样式统一和主题切换问题。 */
+:root {
+  color-scheme: light dark;
+  font-family: "SF Pro Text", "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  --radius-small: 14px;
+  --radius-medium: 20px;
+  --radius-large: 28px;
+  --space-1: 0.75rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: clamp(2rem, 4vw, 3.75rem);
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --shadow-panel: 0 28px 60px rgba(15, 23, 42, 0.14);
+  --blur-panel: blur(26px);
+}
+
+:root[data-theme='light'] {
+  --bg-canvas: oklch(0.98 0.008 250);
+  --bg-subtle: rgba(255, 255, 255, 0.68);
+  --bg-panel: rgba(255, 255, 255, 0.82);
+  --bg-card: rgba(250, 252, 255, 0.94);
+  --bg-strong: oklch(0.93 0.015 252);
+  --text-primary: oklch(0.25 0.02 255);
+  --text-secondary: oklch(0.46 0.015 255);
+  --text-tertiary: oklch(0.62 0.01 255);
+  --border-soft: rgba(133, 154, 189, 0.22);
+  --border-strong: rgba(92, 116, 153, 0.26);
+  --accent: oklch(0.61 0.11 250);
+  --accent-soft: rgba(78, 122, 214, 0.14);
+  --hero-glow: radial-gradient(circle at top left, rgba(120, 163, 255, 0.18), transparent 38%);
+}
+
+:root[data-theme='dark'] {
+  --bg-canvas: oklch(0.19 0.02 255);
+  --bg-subtle: rgba(23, 30, 44, 0.72);
+  --bg-panel: rgba(25, 34, 48, 0.82);
+  --bg-card: rgba(31, 41, 58, 0.92);
+  --bg-strong: oklch(0.27 0.02 255);
+  --text-primary: oklch(0.94 0.01 250);
+  --text-secondary: oklch(0.78 0.015 248);
+  --text-tertiary: oklch(0.65 0.015 248);
+  --border-soft: rgba(137, 160, 196, 0.18);
+  --border-strong: rgba(157, 184, 224, 0.24);
+  --accent: oklch(0.71 0.1 247);
+  --accent-soft: rgba(122, 164, 255, 0.2);
+  --hero-glow: radial-gradient(circle at top left, rgba(88, 138, 255, 0.18), transparent 40%);
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.32);
+  --shadow-panel: 0 28px 60px rgba(0, 0, 0, 0.4);
+}

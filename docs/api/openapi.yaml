@@ -1,0 +1,192 @@
+openapi: 3.1.0
+info:
+  title: LAN Share API
+  version: 0.1.0
+  description: 局域网共享服务 API，支持文字、图片和文件的上传、预览、属性查看、下载与删除。
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /admin/unlock:
+    post:
+      summary: 解锁管理态
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: 解锁成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+  /assets/snippets:
+    post:
+      summary: 创建文字便签
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+  /assets/files:
+    post:
+      summary: 上传图片或文件
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+  /assets:
+    get:
+      summary: 获取资产列表
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [snippet, image, file]
+      responses:
+        '200':
+          description: 资产列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Asset'
+  /assets/{id}:
+    get:
+      summary: 获取资产详情
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: 资产详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+    delete:
+      summary: 删除资产
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401':
+          description: 未进入管理态
+  /assets/{id}/content:
+    get:
+      summary: 下载原始内容
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: 原始内容流
+          content:
+            application/octet-stream: {}
+  /assets/{id}/preview:
+    get:
+      summary: 获取预览内容
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: 预览内容流
+          content:
+            image/*: {}
+            text/plain: {}
+            application/pdf: {}
+        '415':
+          description: 当前文件不支持预览
+components:
+  parameters:
+    AssetId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+  schemas:
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [snippet, image, file]
+        title:
+          type: string
+        textContent:
+          type: string
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+        sha256:
+          type: string
+        previewKind:
+          type: string
+          enum: [text, image, pdf, unsupported]
+        width:
+          type: integer
+        height:
+          type: integer
+        charCount:
+          type: integer
+        storageDriver:
+          type: string
+          enum: [local, minio]
+        uploaderIp:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
