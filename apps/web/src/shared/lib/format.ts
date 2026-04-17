@@ -39,3 +39,22 @@ export function assetGlyph(asset: Asset): string {
   }
   return '▣';
 }
+
+// assetKindLabel 返回更适合列表与属性面板展示的类型名称。
+export function assetKindLabel(asset: Asset): string {
+  if (asset.kind === 'image') {
+    return '图片';
+  }
+  if (asset.kind === 'snippet') {
+    return '文字';
+  }
+  return '文件';
+}
+
+// assetSummary 返回资产在列表中使用的次级摘要文本。
+export function assetSummary(asset: Asset): string {
+  if (asset.kind === 'snippet') {
+    return asset.textContent ?? '文字便签';
+  }
+  return asset.originalName;
+}

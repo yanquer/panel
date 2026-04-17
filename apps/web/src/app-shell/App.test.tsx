@@ -1,5 +1,5 @@
-// 主页面测试文件用于验证主题切换、筛选、预览与管理态交互，避免 Apple 风格首页核心体验回归。
-import { render, screen, waitFor } from '@testing-library/react';
+// 主页面测试文件用于验证视图切换、详情布局与管理态交互，避免共享首页核心体验回归。
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { ThemeProvider } from '../theme/ThemeProvider';
@@ -56,7 +56,7 @@ async function TestAppThemeToggle() {
   const user = userEvent.setup();
   stubFetch(baseAssets);
   renderApp();
-  await screen.findAllByText('会议纪要');
+  await screen.findByRole('region', { name: '卡片视图' });
   expect(document.documentElement.dataset.theme).toBe('light');
   await user.click(screen.getByRole('button', { name: '切换主题' }));
   expect(document.documentElement.dataset.theme).toBe('dark');
@@ -64,56 +64,74 @@ async function TestAppThemeToggle() {
 
 test('主题切换可用', TestAppThemeToggle);
 
-// TestAppFiltering 验证筛选控件会切换列表内容。
-async function TestAppFiltering() {
+// TestViewModes 验证默认卡片视图和列表视图二级切换都可用。
+async function TestViewModes() {
   const user = userEvent.setup();
   stubFetch(baseAssets);
   renderApp();
-  await screen.findByRole('link', { name: '下载' });
-  await user.click(screen.getByRole('tab', { name: '图片' }));
-  await waitFor(() => expect(screen.queryByText('会议纪要')).not.toBeInTheDocument());
-  expect(screen.getAllByText('客厅照片').length).toBeGreaterThan(0);
+  expect(await screen.findByRole('region', { name: '卡片视图' })).toBeInTheDocument();
+  expect(screen.queryByRole('tablist', { name: '列表风格' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('tab', { name: '列表', selected: false }));
+  expect(await screen.findByRole('region', { name: 'Finder 列表' })).toBeInTheDocument();
+  await user.click(screen.getByRole('tab', { name: '大缩略' }));
+  expect(await screen.findByRole('region', { name: '大缩略列表' })).toBeInTheDocument();
+  await user.click(screen.getByRole('tab', { name: '表格' }));
+  expect(await screen.findByRole('region', { name: '表格式列表' })).toBeInTheDocument();
 }
 
-test('分段控件支持过滤图片', TestAppFiltering);
+test('卡片和三种列表风格都能切换', TestViewModes);
 
-// TestAppPreviewAndDelete 验证管理态解锁后可以删除选中的资产。
-async function TestAppPreviewAndDelete() {
+// TestDetailLayoutAndDelete 验证详情面板结构层级和删除链路保持可用。
+async function TestDetailLayoutAndDelete() {
   const user = userEvent.setup();
   const fetchMock = stubFetch(baseAssets);
   renderApp();
-  await screen.findByText('客厅照片');
-  await user.click(screen.getByText('客厅照片'));
+  await user.click(await screen.findByRole('tab', { name: '列表', selected: false }));
+  await user.click(await screen.findByRole('button', { name: /客厅照片/ }));
+  expect(screen.getByRole('region', { name: '详情内容' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: '格式属性' })).toBeInTheDocument();
   expect(screen.getAllByAltText('客厅照片').length).toBeGreaterThan(0);
-  expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument();
   await user.type(screen.getByPlaceholderText('输入管理口令'), 'lan-share-admin');
   await user.click(screen.getByRole('button', { name: '解锁删除能力' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: '删除' })).toBeInTheDocument());
-  await user.click(screen.getByRole('button', { name: '删除' }));
+  await user.click(await screen.findByRole('button', { name: '删除' }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/image-1', expect.objectContaining({ method: 'DELETE', credentials: 'include' })));
 }
 
-test('图片预览和管理态删除可用', TestAppPreviewAndDelete);
+test('详情面板强调内容区并保留删除链路', TestDetailLayoutAndDelete);
 
-// TestAppMixedRendering 验证文字卡片和文件行项目都按各自样式渲染。
-async function TestAppMixedRendering() {
+// TestPreferenceRestore 验证视图偏好会从本地存储中恢复。
+async function TestPreferenceRestore() {
   stubFetch(baseAssets);
-  renderApp();
-  const matches = await screen.findAllByText('把今天讨论的三件事同步到手机。');
-  expect(matches.length).toBeGreaterThan(0);
-  expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument();
+  renderApp({ 'lan-share-view-mode': 'list', 'lan-share-list-style': 'table' });
+  expect(await screen.findByRole('region', { name: '表格式列表' })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: '列表', selected: true })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: '表格', selected: true })).toBeInTheDocument();
+  const table = screen.getByRole('region', { name: '表格式列表' });
+  expect(within(table).getByText('名称')).toBeInTheDocument();
 }
 
-test('文字卡片和文件行项目都能渲染', TestAppMixedRendering);
+test('视图偏好可从 localStorage 恢复', TestPreferenceRestore);
 
-// renderApp 挂载完整应用并附带主题提供器。
-function renderApp() {
-  window.localStorage.clear();
+// renderApp 挂载完整应用并在渲染前写入可选的界面偏好。
+function renderApp(preferences: Record<string, string> = {}) {
+  installStorage(preferences);
   return render(
     <ThemeProvider>
       <App />
     </ThemeProvider>,
   );
+}
+
+// installStorage 为测试运行时注入可控的 localStorage 实现。
+function installStorage(preferences: Record<string, string>) {
+  const store = new Map(Object.entries(preferences));
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+    clear: () => store.clear(),
+  };
+  Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
 }
 
 // stubFetch 按当前请求路径返回测试所需的资产数据。

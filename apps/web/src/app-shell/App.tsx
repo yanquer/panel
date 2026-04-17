@@ -17,8 +17,19 @@ const filterOptions = [
   { label: '文件', value: 'file' },
 ] as const;
 
+const viewModeOptions = [
+  { label: '卡片', value: 'card' },
+  { label: '列表', value: 'list' },
+] as const;
+
+const listStyleOptions = [
+  { label: 'Finder', value: 'finder' },
+  { label: '大缩略', value: 'gallery' },
+  { label: '表格', value: 'table' },
+] as const;
+
 // App 渲染局域网共享服务的主界面。
-export function App() {
+export function App(): JSX.Element {
   const workspace = useAssetWorkspace();
   const counts = useMemo(() => summarize(workspace.items), [workspace.items]);
 
@@ -51,13 +62,17 @@ export function App() {
           </div>
 
           <section className="workspace__main">
-            <div className="toolbar panel panel--glass">
-              <SegmentedControl value={workspace.filter} options={filterOptions} onChange={workspace.setFilter} />
-              <div className="toolbar__right">
+            <div className="toolbar toolbar--asset panel panel--glass">
+              <SegmentedControl ariaLabel="资产过滤" value={workspace.filter} options={filterOptions} onChange={workspace.setFilter} />
+              <div className="toolbar__groups">
+                <SegmentedControl ariaLabel="视图模式" value={workspace.viewMode} options={viewModeOptions} onChange={workspace.setViewMode} />
+                {workspace.viewMode === 'list' ? <SegmentedControl ariaLabel="列表风格" value={workspace.listStyle} options={listStyleOptions} onChange={workspace.setListStyle} /> : null}
+              </div>
+              <div className="toolbar__status">
                 <span className="muted">{workspace.loading ? '正在刷新共享流…' : workspace.message}</span>
               </div>
             </div>
-            {workspace.items.length === 0 && !workspace.loading ? <EmptyState /> : <AssetGrid items={workspace.items} selectedId={workspace.selectedId} onSelect={workspace.selectAsset} />}
+            {workspace.items.length === 0 && !workspace.loading ? <EmptyState /> : <AssetGrid items={workspace.items} selectedId={workspace.selectedId} onSelect={workspace.selectAsset} viewMode={workspace.viewMode} listStyle={workspace.listStyle} />}
           </section>
 
           <div className="workspace__main">
@@ -71,7 +86,7 @@ export function App() {
 }
 
 // StatCard 渲染首页顶部的单个统计卡片。
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value }: { label: string; value: string }): JSX.Element {
   return (
     <div className="hero__stat">
       <span className="meta-label">{label}</span>
@@ -81,7 +96,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 // summarize 统计首页展示所需的资产数量概览。
-function summarize(items: { kind: string }[]) {
+function summarize(items: { kind: string }[]): { total: number; snippets: number; media: number } {
   const snippets = items.filter((item) => item.kind === 'snippet').length;
   const media = items.filter((item) => item.kind !== 'snippet').length;
   return { total: items.length, snippets, media };

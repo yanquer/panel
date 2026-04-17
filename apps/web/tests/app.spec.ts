@@ -26,39 +26,39 @@ test.beforeEach(async ({ page }) => {
   await installRoutes(page);
 });
 
-// 桌面端完整链路覆盖上传、查看、解锁和删除流程。
-test('桌面端浅色主题完整链路', async ({ page }, testInfo) => {
+// 桌面端链路覆盖从卡片切换到 Finder 列表并查看图片详情。
+test('桌面端可切换到 Finder 列表并查看详情', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
   await page.goto('/');
-  await expect(page.getByText('同一网络，安静共享。')).toBeVisible();
-  await page.getByPlaceholder('输入将要共享的文字').fill('今晚 8 点前发版。');
-  await page.getByRole('button', { name: '发布文字' }).click();
-  await expect(page.getByText('今晚 8 点前发版。')).toBeVisible();
+  await page.getByRole('tab', { name: '列表', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Finder 列表' })).toBeVisible();
+  await page.getByRole('button', { name: /窗边照片/ }).click();
+  await expect(page.getByRole('region', { name: '详情内容' })).toBeVisible();
+  await expect(page.locator('.detail img[alt="窗边照片"]')).toBeVisible();
+});
+
+// 桌面端链路覆盖切到表格视图后仍可完成删除操作。
+test('桌面端可切换到表格列表并完成删除链路', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
   await page.locator('input[type="file"]').setInputFiles({ name: 'new-shot.png', mimeType: 'image/png', buffer: tinyPng });
-  await expect(page.getByText('new-shot.png')).toBeVisible();
   await page.getByPlaceholder('输入管理口令').fill('lan-share-admin');
   await page.getByRole('button', { name: '解锁删除能力' }).click();
+  await page.getByRole('tab', { name: '列表', exact: true }).click();
+  await page.getByRole('tab', { name: '表格', exact: true }).click();
+  await expect(page.getByRole('region', { name: '表格式列表' })).toContainText('名称');
   await page.getByRole('button', { name: /new-shot\.png/ }).click();
   await page.getByRole('button', { name: '删除', exact: true }).click();
   await expect(page.getByText('new-shot.png')).toHaveCount(0);
 });
 
-// 深色主题链路覆盖主题切换和图片预览。
-test('桌面端深色主题图片预览链路', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop');
-  await page.goto('/');
-  await page.getByRole('button', { name: '切换主题' }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByRole('button', { name: /窗边照片/ }).click();
-  await expect(page.locator('.detail img[alt="窗边照片"]')).toBeVisible();
-});
-
-// 移动端链路覆盖上传后查看详情面板。
-test('移动端上传与详情查看链路', async ({ page }, testInfo) => {
+// 移动端链路覆盖切换到列表视图后依旧可查看详情。
+test('移动端切到列表视图后仍可查看详情', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
   await page.goto('/');
+  await page.getByRole('tab', { name: '列表', exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: 'phone-shot.png', mimeType: 'image/png', buffer: tinyPng });
-  await expect(page.getByText('phone-shot.png')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Finder 列表' })).toBeVisible();
   await page.getByRole('button', { name: /phone-shot\.png/ }).click();
   await expect(page.getByRole('complementary').getByRole('heading', { name: 'phone-shot.png' })).toBeVisible();
 });

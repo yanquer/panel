@@ -10,3 +10,6 @@
 - 新增 Apple 风格浅色/深色双主题界面与前端交互测试、端到端功能测试
 - 补充 `README.md`、`docs/api/openapi.yaml`、`docs/development.md`、`docs/deployment/compose.md`、`docs/design.md`
 
+### 变更
+- 共享流新增卡片 / 列表主视图切换，并为列表模式补充 Finder、大缩略、表格三种风格
+- 详情面板重排为内容优先布局，扩大预览区域并降低格式属性的视觉权重
