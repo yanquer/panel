@@ -9,6 +9,7 @@
 - 匿名上传、查看、下载
 - 管理口令解锁删除能力
 - `MinIO` 与本地磁盘双存储驱动
+- Docker 构建内置双 Go 模块镜像源回退链，降低 `go mod download` 失败概率
 - `Docker Compose` 一键部署
 
 ## 快速开始
@@ -18,6 +19,7 @@
 4. 后端接口：`http://localhost:8080/api/v1`
 5. MinIO 控制台：`http://localhost:9001`
 6. 如果本机端口冲突，可在 `.env` 中覆盖 `WEB_HOST_PORT`、`API_HOST_PORT`、`MINIO_API_PORT`、`MINIO_CONSOLE_PORT`
+7. 如果你所在网络对 Go 官方源不稳定，可在 `.env` 中覆盖 `GO_PROXY_PRIMARY`、`GO_PROXY_SECONDARY`、`GO_SUMDB`
 
 ## 本地开发
 - 后端：`cd apps/api && go run ./cmd/server`

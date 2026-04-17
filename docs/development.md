@@ -28,6 +28,8 @@ pnpm --dir apps/web test:e2e
 
 ## 环境变量
 - `DATABASE_URL`：PostgreSQL 连接串
+- `GO_PROXY_PRIMARY` / `GO_PROXY_SECONDARY`：Docker 构建 Go 依赖时使用的两个模块镜像源
+- `GO_SUMDB`：Docker 构建时使用的 Go 校验服务地址
 - `STORAGE_DRIVER`：`minio` 或 `local`
 - `STORAGE_BUCKET`：对象存储桶名
 - `LOCAL_STORAGE_DIR`：本地磁盘模式目录

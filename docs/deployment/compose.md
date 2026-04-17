@@ -12,6 +12,15 @@
 docker compose up --build
 ```
 
+## Go 依赖下载镜像
+- `api` 镜像构建默认使用两个 Go 模块镜像，并按优先顺序回退：
+  - `GO_PROXY_PRIMARY=https://goproxy.cn`
+  - `GO_PROXY_SECONDARY=https://proxy.golang.com.cn`
+  - 最后回退到 `direct`
+- 代理链使用 `|` 连接，遇到 `502`、超时等错误时也会继续尝试下一个镜像
+- 校验服务默认使用 `GO_SUMDB=sum.golang.google.cn`
+- 如果当前网络环境更适合其他镜像，可在 `.env` 中覆盖这些值后重新执行 `docker compose build api`
+
 ## 切换到本地磁盘存储
 1. 在 `.env` 中把 `STORAGE_DRIVER` 改为 `local`
 2. 保留 `api` 服务上的 `./data/local-storage:/data/local-storage` 挂载

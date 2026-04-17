@@ -28,6 +28,10 @@ services:
   api:
     build:
       context: ./apps/api
+      args:
+        GO_PROXY_PRIMARY: ${GO_PROXY_PRIMARY:-https://goproxy.cn}
+        GO_PROXY_SECONDARY: ${GO_PROXY_SECONDARY:-https://proxy.golang.com.cn}
+        GO_SUMDB: ${GO_SUMDB:-sum.golang.google.cn}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://lan_share:lan_share@postgres:5432/lan_share?sslmode=disable}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-minio}

@@ -1,5 +1,10 @@
 # 该文件用于构建 Go 后端服务镜像，解决局域网共享 API 在 Compose 环境中的可部署问题。
 FROM golang:1.26 AS builder
+ARG GO_PROXY_PRIMARY=https://goproxy.cn
+ARG GO_PROXY_SECONDARY=https://proxy.golang.com.cn
+ARG GO_SUMDB=sum.golang.google.cn
+ENV GOPROXY=${GO_PROXY_PRIMARY}|${GO_PROXY_SECONDARY}|direct
+ENV GOSUMDB=${GO_SUMDB}
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
