@@ -1,5 +1,5 @@
 // API 客户端文件用于封装共享服务请求，解决组件层重复拼接地址和处理凭证的问题。
-import type { Asset, AssetKind, AssetListResponse } from './types';
+import type { Asset, AssetKind, AssetListResponse, UpdateAssetInput } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
@@ -30,6 +30,11 @@ export function unlockAdmin(password: string): Promise<{ ok: boolean }> {
 // deleteAsset 删除指定资产。
 export function deleteAsset(id: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(`/assets/${id}`, { method: 'DELETE' });
+}
+
+// updateAsset 更新指定资产的标题和便签正文。
+export function updateAsset(id: string, input: UpdateAssetInput): Promise<Asset> {
+  return request<Asset>(`/assets/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
 // previewUrl 生成资产预览地址供图片和 PDF 内嵌展示。

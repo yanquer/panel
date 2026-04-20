@@ -25,6 +25,7 @@ type AssetRepository interface {
 	Create(ctx context.Context, asset domain.Asset) (domain.Asset, error)
 	GetByID(ctx context.Context, id string) (domain.Asset, error)
 	List(ctx context.Context, filter domain.ListFilter) ([]domain.Asset, error)
+	Update(ctx context.Context, asset domain.Asset) (domain.Asset, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -44,6 +45,12 @@ type CreateFileInput struct {
 	FileName   string
 	Content    []byte
 	UploaderIP string
+}
+
+type UpdateAssetInput struct {
+	ID      string
+	Title   string
+	Content *string
 }
 
 type ContentResult struct {
@@ -106,6 +113,30 @@ func (s AssetService) OpenContent(ctx context.Context, id string, previewMode bo
 	return ContentResult{Asset: asset, Object: object, Inline: previewMode, Preview: previewMode}, err
 }
 
+// Update 更新资产标题，并在便签场景下同步更新正文与元数据。
+func (s AssetService) Update(ctx context.Context, input UpdateAssetInput) (domain.Asset, error) {
+	asset, err := s.repo.GetByID(ctx, input.ID)
+	if err != nil {
+		return domain.Asset{}, err
+	}
+	asset.Title = resolveAssetTitle(asset, input.Title)
+	if input.Content == nil {
+		return s.repo.Update(ctx, asset)
+	}
+	if asset.Kind != domain.AssetKindSnippet {
+		return domain.Asset{}, domain.ErrInvalidInput
+	}
+	payload, meta, err := snippetPayload(*input.Content)
+	if err != nil {
+		return domain.Asset{}, err
+	}
+	asset = applySnippetUpdate(asset, payload, meta)
+	if _, err = s.store.Put(ctx, storage.PutInput{Key: asset.StoredKey, ContentType: asset.MimeType, Reader: bytes.NewReader(payload), Size: int64(len(payload))}); err != nil {
+		return domain.Asset{}, err
+	}
+	return s.repo.Update(ctx, asset)
+}
+
 // Delete 删除资产记录及其对应对象内容。
 func (s AssetService) Delete(ctx context.Context, id string) error {
 	asset, err := s.repo.GetByID(ctx, id)
@@ -150,6 +181,35 @@ func cleanTitle(raw string, fallback string) string {
 		return fallback
 	}
 	return trimmed
+}
+
+// resolveAssetTitle 根据资产类型整理编辑后的展示标题。
+func resolveAssetTitle(asset domain.Asset, raw string) string {
+	fallback := asset.OriginalName
+	if asset.Kind == domain.AssetKindSnippet {
+		fallback = "新便签"
+	}
+	return cleanTitle(raw, fallback)
+}
+
+// snippetPayload 规范化便签正文并生成对应的元数据。
+func snippetPayload(content string) ([]byte, metadata.Result, error) {
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" {
+		return nil, metadata.Result{}, domain.ErrInvalidInput
+	}
+	payload := []byte(trimmed)
+	return payload, metadata.FromBytes("text/plain; charset=utf-8", payload), nil
+}
+
+// applySnippetUpdate 把便签正文更新同步映射回资产元数据。
+func applySnippetUpdate(asset domain.Asset, payload []byte, meta metadata.Result) domain.Asset {
+	asset.TextContent = string(payload)
+	asset.MimeType = "text/plain; charset=utf-8"
+	asset.SizeBytes = int64(len(payload))
+	asset.SHA256 = sumSHA256(payload)
+	asset.CharCount = meta.CharCount
+	return asset
 }
 
 // newID 生成用于资产主键的随机十六进制标识。

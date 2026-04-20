@@ -60,6 +60,64 @@ func TestOpenPreviewBlocked(t *testing.T) {
 	}
 }
 
+// TestUpdateSnippet 验证便签更新会同步刷新正文和元数据。
+func TestUpdateSnippet(t *testing.T) {
+	repo := &memoryRepo{items: map[string]domain.Asset{}}
+	store := &memoryStore{items: map[string][]byte{}}
+	svc := NewAssetService(repo, store, domain.StorageDriverLocal)
+	asset, err := svc.CreateSnippet(context.Background(), CreateSnippetInput{Title: "旧标题", Content: "旧内容", UploaderIP: "127.0.0.1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := "新的便签正文"
+	updated, err := svc.Update(context.Background(), UpdateAssetInput{ID: asset.ID, Title: "新标题", Content: &content})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Title != "新标题" || updated.TextContent != content {
+		t.Fatalf("unexpected updated asset: %+v", updated)
+	}
+	if string(store.items[asset.StoredKey]) != content {
+		t.Fatalf("unexpected stored payload: %s", string(store.items[asset.StoredKey]))
+	}
+}
+
+// TestUpdateFileTitle 验证图片和文件仅更新标题时不会覆盖原始内容。
+func TestUpdateFileTitle(t *testing.T) {
+	repo := &memoryRepo{items: map[string]domain.Asset{}}
+	store := &memoryStore{items: map[string][]byte{}}
+	svc := NewAssetService(repo, store, domain.StorageDriverLocal)
+	asset, err := svc.CreateFile(context.Background(), CreateFileInput{FileName: "shot.png", Content: tinyPNGBytes(), UploaderIP: "127.0.0.1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := string(store.items[asset.StoredKey])
+	updated, err := svc.Update(context.Background(), UpdateAssetInput{ID: asset.ID, Title: "封面照片"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Title != "封面照片" || updated.OriginalName != "shot.png" {
+		t.Fatalf("unexpected file update: %+v", updated)
+	}
+	if string(store.items[asset.StoredKey]) != before {
+		t.Fatal("file payload changed unexpectedly")
+	}
+}
+
+// TestUpdateRejectsFileContent 验证非便签资产不允许提交正文内容。
+func TestUpdateRejectsFileContent(t *testing.T) {
+	svc := newTestService()
+	asset, err := svc.CreateFile(context.Background(), CreateFileInput{FileName: "doc.pdf", Content: []byte("%PDF"), UploaderIP: "127.0.0.1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := "不应允许"
+	_, err = svc.Update(context.Background(), UpdateAssetInput{ID: asset.ID, Title: "文档", Content: &content})
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("unexpected update error: %v", err)
+	}
+}
+
 // TestDelete 验证删除会同步移除仓储记录与对象存储内容。
 func TestDelete(t *testing.T) {
 	repo := &memoryRepo{items: map[string]domain.Asset{}}
@@ -114,6 +172,17 @@ func (r *memoryRepo) List(_ context.Context, filter domain.ListFilter) ([]domain
 		}
 	}
 	return items, nil
+}
+
+// Update 在内存仓储中覆盖资产记录内容。
+func (r *memoryRepo) Update(_ context.Context, asset domain.Asset) (domain.Asset, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.items[asset.ID]; !ok {
+		return domain.Asset{}, domain.ErrAssetNotFound
+	}
+	r.items[asset.ID] = asset
+	return asset, nil
 }
 
 // Delete 从内存仓储中移除资产记录。

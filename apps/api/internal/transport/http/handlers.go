@@ -28,6 +28,11 @@ type snippetRequest struct {
 	Content string `json:"content"`
 }
 
+type updateAssetRequest struct {
+	Title   string  `json:"title"`
+	Content *string `json:"content,omitempty"`
+}
+
 // NewHandler 创建 API 处理器并注入业务依赖。
 func NewHandler(assets service.AssetService, session auth.SessionManager) Handler {
 	return Handler{assets: assets, session: session}
@@ -98,6 +103,25 @@ func (h Handler) ListAssets(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 // GetAsset 返回单个资产详情。
 func (h Handler) GetAsset(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	asset, err := h.assets.Get(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, stdhttp.StatusOK, asset)
+}
+
+// UpdateAsset 更新指定资产的标题与便签正文。
+func (h Handler) UpdateAsset(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	if !h.isAdmin(r) {
+		writeError(w, domain.ErrUnauthorized)
+		return
+	}
+	request := updateAssetRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeError(w, domain.ErrInvalidInput)
+		return
+	}
+	asset, err := h.assets.Update(r.Context(), service.UpdateAssetInput{ID: r.PathValue("id"), Title: request.Title, Content: request.Content})
 	if err != nil {
 		writeError(w, err)
 		return

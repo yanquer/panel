@@ -17,17 +17,17 @@ export function AdminUnlockPanel({ busy, unlocked, onUnlock }: Props) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel panel--glass">
       <span className="meta-label">Admin Mode</span>
       <div>
-        <h2 className="asset-title">删除前先进入管理态</h2>
-        <p className="muted">默认所有访问者都能上传、查看和下载，但删除需要口令确认。</p>
+        <h2 className="panel__title">解锁编辑与删除</h2>
+        <p className="panel__description">匿名访问者仍可上传、查看和下载，共享项的编辑与删除只对管理员开放。</p>
       </div>
       <div className="status-pill">{unlocked ? '管理模式已开启' : '当前为匿名共享模式'}</div>
       <input className="input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="输入管理口令" />
       <div className="unlock__actions">
         <button className="button" disabled={busy || unlocked || password.trim().length === 0} onClick={() => void handleUnlock()}>
-          解锁删除能力
+          解锁管理能力
         </button>
       </div>
     </section>

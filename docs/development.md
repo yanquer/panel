@@ -26,6 +26,12 @@ pnpm --dir apps/web test
 pnpm --dir apps/web test:e2e
 ```
 
+## 当前工作区形态
+- 首页采用备忘录式三栏布局：左侧轻操作区，中间共享流，右侧内容画布
+- 共享流收敛为单一列表，不再维护卡片 / Finder / 大缩略 / 表格多视图切换
+- 管理态解锁后支持编辑所有共享项标题，并支持编辑便签正文
+- 详情区保存采用显式提交，前端测试与端到端测试都需要覆盖保存成功后的列表同步
+
 ## 环境变量
 - `DATABASE_URL`：PostgreSQL 连接串
 - `GO_PROXY_PRIMARY` / `GO_PROXY_SECONDARY`：Docker 构建 Go 依赖时使用的两个模块镜像源
@@ -43,3 +49,4 @@ pnpm --dir apps/web test:e2e
 - 新增函数和方法加中文注释
 - 前端颜色、圆角、间距、动效统一走 `src/theme/tokens.css`
 - 文字、图片、文件共用统一资产模型，不再拆分三套接口
+- 功能变更时同步更新 `docs/api/openapi.yaml`、`README.md`、`CHANGELOG.md` 与相关测试

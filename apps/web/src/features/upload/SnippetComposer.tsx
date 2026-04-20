@@ -21,8 +21,8 @@ export function SnippetComposer({ busy, onSubmit }: Props) {
     <section className="panel panel--glass">
       <span className="meta-label">Quick Note</span>
       <div>
-        <h2 className="asset-title">快速写下一段内容</h2>
-        <p className="muted">适合密码、临时说明、待办或一段刚复制出来的文字。</p>
+        <h2 className="panel__title">快速写下一段内容</h2>
+        <p className="panel__description">适合密码、临时说明、待办或一段刚复制出来的文字，发布后会立刻进入共享流。</p>
       </div>
       <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="标题，可留空" />
       <textarea className="textarea" value={content} onChange={(event) => setContent(event.target.value)} placeholder="输入将要共享的文字" />

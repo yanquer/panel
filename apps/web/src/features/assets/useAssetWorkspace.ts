@@ -1,14 +1,9 @@
 // 资产工作区状态文件用于管理列表加载、上传、筛选、选中与管理态交互，解决页面状态分散的问题。
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Asset, AssetKind } from '../../api/types';
-import { createSnippet, deleteAsset, fetchAssets, unlockAdmin, uploadFile } from '../../api/client';
-
-const VIEW_MODE_KEY = 'lan-share-view-mode';
-const LIST_STYLE_KEY = 'lan-share-list-style';
+import type { Asset, AssetKind, UpdateAssetInput } from '../../api/types';
+import { createSnippet, deleteAsset, fetchAssets, unlockAdmin, updateAsset, uploadFile } from '../../api/client';
 
 export type AssetFilter = AssetKind | 'all';
-export type ViewMode = 'card' | 'list';
-export type ListStyle = 'finder' | 'gallery' | 'table';
 
 interface WorkspaceState {
   items: Asset[];
@@ -18,8 +13,6 @@ interface WorkspaceState {
   selectedId: string | null;
   message: string;
   adminUnlocked: boolean;
-  viewMode: ViewMode;
-  listStyle: ListStyle;
 }
 
 // useAssetWorkspace 集中管理页面所需的资产状态和交互动作。
@@ -30,29 +23,11 @@ export function useAssetWorkspace() {
     void refresh(state.filter);
   }, [state.filter]);
 
-  useEffect(() => {
-    savePreference(VIEW_MODE_KEY, state.viewMode);
-  }, [state.viewMode]);
-
-  useEffect(() => {
-    savePreference(LIST_STYLE_KEY, state.listStyle);
-  }, [state.listStyle]);
-
   const selectedAsset = useMemo(() => state.items.find((item) => item.id === state.selectedId) ?? null, [state.items, state.selectedId]);
 
   // setFilter 切换当前资产过滤维度。
   const setFilter = useCallback((filter: AssetFilter) => {
     setState((current) => ({ ...current, filter }));
-  }, []);
-
-  // setViewMode 切换资产区的主视图模式。
-  const setViewMode = useCallback((viewMode: ViewMode) => {
-    setState((current) => ({ ...current, viewMode }));
-  }, []);
-
-  // setListStyle 切换列表视图下的具体展示风格。
-  const setListStyle = useCallback((listStyle: ListStyle) => {
-    setState((current) => ({ ...current, listStyle }));
   }, []);
 
   // selectAsset 记录当前详情面板选中的资产。
@@ -93,11 +68,19 @@ export function useAssetWorkspace() {
     await runBusyAction('共享项已移除。', async () => {
       await deleteAsset(assetId);
       await refresh(state.filter);
-      setState((current) => ({ ...current, selectedId: current.selectedId === assetId ? null : current.selectedId }));
     });
   }, [state.filter]);
 
-  return { ...state, selectedAsset, setFilter, setViewMode, setListStyle, selectAsset, submitSnippet, submitFiles, unlock, remove };
+  // saveAsset 更新当前共享项的标题或便签正文，并同步回列表与详情区。
+  const saveAsset = useCallback(async (assetId: string, input: UpdateAssetInput) => {
+    return runBusyAction('共享项已更新。', async () => {
+      const asset = await updateAsset(assetId, input);
+      setState((current) => ({ ...current, items: replaceAsset(current.items, asset), selectedId: asset.id }));
+      return asset;
+    });
+  }, []);
+
+  return { ...state, selectedAsset, saveAsset, setFilter, selectAsset, submitSnippet, submitFiles, unlock, remove };
 
   // refresh 重新加载资产列表并保持当前选中状态尽量稳定。
   async function refresh(filter: AssetFilter) {
@@ -111,11 +94,12 @@ export function useAssetWorkspace() {
   }
 
   // runBusyAction 统一处理忙碌状态、成功提示与失败提示。
-  async function runBusyAction(successMessage: string, action: () => Promise<void>) {
+  async function runBusyAction<T>(successMessage: string, action: () => Promise<T>): Promise<T> {
     setState((current) => ({ ...current, busy: true, message: '正在处理，请稍候…' }));
     try {
-      await action();
+      const result = await action();
       setState((current) => ({ ...current, busy: false, message: successMessage }));
+      return result;
     } catch (error) {
       setState((current) => ({ ...current, busy: false, message: getErrorMessage(error) }));
       throw error;
@@ -133,32 +117,7 @@ function createInitialState(): WorkspaceState {
     selectedId: null,
     message: '局域网就绪，拖入内容即可共享。',
     adminUnlocked: false,
-    viewMode: readViewMode(),
-    listStyle: readListStyle(),
   };
-}
-
-// readViewMode 读取本地缓存的主视图模式并回退到卡片视图。
-function readViewMode(): ViewMode {
-  return readPreference(VIEW_MODE_KEY) === 'list' ? 'list' : 'card';
-}
-
-// readListStyle 读取本地缓存的列表风格并回退到 Finder 列表。
-function readListStyle(): ListStyle {
-  const value = readPreference(LIST_STYLE_KEY);
-  return value === 'gallery' || value === 'table' ? value : 'finder';
-}
-
-// readPreference 从浏览器本地存储中读取界面偏好值。
-function readPreference(key: string): string | null {
-  return typeof window === 'undefined' ? null : window.localStorage.getItem(key);
-}
-
-// savePreference 把界面偏好写入浏览器本地存储。
-function savePreference(key: string, value: string): void {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(key, value);
-  }
 }
 
 // keepSelection 在刷新列表后尽量保留原有选中状态。
@@ -172,4 +131,9 @@ function keepSelection(selectedId: string | null, items: Asset[]): string | null
 // getErrorMessage 把未知异常统一转换为可读提示语。
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '操作失败，请稍后再试';
+}
+
+// replaceAsset 用最新的资产内容覆盖列表中的旧项并保持顺序不变。
+function replaceAsset(items: Asset[], asset: Asset): Asset[] {
+  return items.map((item) => (item.id === asset.id ? asset : item));
 }

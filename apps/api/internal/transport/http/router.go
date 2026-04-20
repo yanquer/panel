@@ -16,6 +16,7 @@ func NewRouter(handler Handler) stdhttp.Handler {
 	mux.HandleFunc("POST /api/v1/assets/files", handler.CreateFile)
 	mux.HandleFunc("GET /api/v1/assets", handler.ListAssets)
 	mux.HandleFunc("GET /api/v1/assets/{id}", handler.GetAsset)
+	mux.HandleFunc("PATCH /api/v1/assets/{id}", handler.UpdateAsset)
 	mux.HandleFunc("GET /api/v1/assets/{id}/content", handler.GetContent)
 	mux.HandleFunc("GET /api/v1/assets/{id}/preview", handler.GetPreview)
 	mux.HandleFunc("DELETE /api/v1/assets/{id}", handler.DeleteAsset)
@@ -56,5 +57,5 @@ func applyCORSHeaders(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 	}
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
 }

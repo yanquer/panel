@@ -1,4 +1,4 @@
-// 主页面测试文件用于验证视图切换、详情布局与管理态交互，避免共享首页核心体验回归。
+// 主页面测试文件用于验证备忘录式工作区、管理员编辑和列表详情同步，避免首页关键交互回归。
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
@@ -51,12 +51,12 @@ const baseAssets: Asset[] = [
   },
 ];
 
-// TestAppThemeToggle 验证主题切换会更新根节点主题标识。
+// TestAppThemeToggle 验证主题切换仍然可用。
 async function TestAppThemeToggle() {
   const user = userEvent.setup();
   stubFetch(baseAssets);
   renderApp();
-  await screen.findByRole('region', { name: '卡片视图' });
+  await screen.findByRole('region', { name: '共享列表' });
   expect(document.documentElement.dataset.theme).toBe('light');
   await user.click(screen.getByRole('button', { name: '切换主题' }));
   expect(document.documentElement.dataset.theme).toBe('dark');
@@ -64,57 +64,62 @@ async function TestAppThemeToggle() {
 
 test('主题切换可用', TestAppThemeToggle);
 
-// TestViewModes 验证默认卡片视图和列表视图二级切换都可用。
-async function TestViewModes() {
+// TestWorkspaceLayout 验证共享列表、过滤和内容画布语义都存在。
+async function TestWorkspaceLayout() {
   const user = userEvent.setup();
   stubFetch(baseAssets);
   renderApp();
-  expect(await screen.findByRole('region', { name: '卡片视图' })).toBeInTheDocument();
-  expect(screen.queryByRole('tablist', { name: '列表风格' })).not.toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: '列表', selected: false }));
-  expect(await screen.findByRole('region', { name: 'Finder 列表' })).toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: '大缩略' }));
-  expect(await screen.findByRole('region', { name: '大缩略列表' })).toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: '表格' }));
-  expect(await screen.findByRole('region', { name: '表格式列表' })).toBeInTheDocument();
+  const list = await screen.findByRole('region', { name: '共享列表' });
+  expect(screen.getByRole('region', { name: '内容画布' })).toBeInTheDocument();
+  expect(within(list).getByText('会议纪要')).toBeInTheDocument();
+  await user.click(screen.getByRole('tab', { name: '图片', selected: false }));
+  await waitFor(() => expect(within(list).queryByText('会议纪要')).not.toBeInTheDocument());
+  expect(within(list).getByText('客厅照片')).toBeInTheDocument();
 }
 
-test('卡片和三种列表风格都能切换', TestViewModes);
+test('备忘录式工作区支持过滤与内容画布', TestWorkspaceLayout);
 
-// TestDetailLayoutAndDelete 验证详情面板结构层级和删除链路保持可用。
-async function TestDetailLayoutAndDelete() {
+// TestSnippetEditFlow 验证管理员可编辑便签标题和正文并同步更新列表与详情。
+async function TestSnippetEditFlow() {
   const user = userEvent.setup();
   const fetchMock = stubFetch(baseAssets);
   renderApp();
-  await user.click(await screen.findByRole('tab', { name: '列表', selected: false }));
-  await user.click(await screen.findByRole('button', { name: /客厅照片/ }));
-  expect(screen.getByRole('region', { name: '详情内容' })).toBeInTheDocument();
-  expect(screen.getByRole('group', { name: '格式属性' })).toBeInTheDocument();
-  expect(screen.getAllByAltText('客厅照片').length).toBeGreaterThan(0);
-  await user.type(screen.getByPlaceholderText('输入管理口令'), 'lan-share-admin');
-  await user.click(screen.getByRole('button', { name: '解锁删除能力' }));
-  await user.click(await screen.findByRole('button', { name: '删除' }));
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/image-1', expect.objectContaining({ method: 'DELETE', credentials: 'include' })));
+  await screen.findByRole('region', { name: '共享列表' });
+  await unlockAdmin(user);
+  const editRegion = screen.getByRole('region', { name: '内容画布' });
+  const titleInput = screen.getByPlaceholderText('输入共享标题');
+  const contentInput = screen.getByPlaceholderText('输入便签正文');
+  await user.clear(titleInput);
+  await user.type(titleInput, '修订后的会议纪要');
+  await user.clear(contentInput);
+  await user.type(contentInput, '新的同步说明');
+  await user.click(screen.getByRole('button', { name: '保存更改' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/snippet-1', expect.objectContaining({ method: 'PATCH', credentials: 'include' })));
+  expect(within(screen.getByRole('region', { name: '共享列表' })).getByText('修订后的会议纪要')).toBeInTheDocument();
+  expect(within(editRegion).getByDisplayValue('新的同步说明')).toBeInTheDocument();
 }
 
-test('详情面板强调内容区并保留删除链路', TestDetailLayoutAndDelete);
+test('管理员可编辑便签并同步更新列表与详情', TestSnippetEditFlow);
 
-// TestPreferenceRestore 验证视图偏好会从本地存储中恢复。
-async function TestPreferenceRestore() {
+// TestImageRenameFlow 验证图片标题编辑后会同步影响列表与详情区。
+async function TestImageRenameFlow() {
+  const user = userEvent.setup();
   stubFetch(baseAssets);
-  renderApp({ 'lan-share-view-mode': 'list', 'lan-share-list-style': 'table' });
-  expect(await screen.findByRole('region', { name: '表格式列表' })).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: '列表', selected: true })).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: '表格', selected: true })).toBeInTheDocument();
-  const table = screen.getByRole('region', { name: '表格式列表' });
-  expect(within(table).getByText('名称')).toBeInTheDocument();
+  renderApp();
+  await unlockAdmin(user);
+  await user.click(screen.getByRole('button', { name: /客厅照片/ }));
+  const titleInput = await screen.findByPlaceholderText('输入共享标题');
+  await user.clear(titleInput);
+  await user.type(titleInput, '客厅封面');
+  await user.click(screen.getByRole('button', { name: '保存更改' }));
+  await waitFor(() => expect(screen.getAllByDisplayValue('客厅封面').length).toBeGreaterThan(0));
+  expect(screen.getByRole('button', { name: /客厅封面/ })).toBeInTheDocument();
 }
 
-test('视图偏好可从 localStorage 恢复', TestPreferenceRestore);
+test('管理员重命名图片后列表与详情会同步更新', TestImageRenameFlow);
 
-// renderApp 挂载完整应用并在渲染前写入可选的界面偏好。
-function renderApp(preferences: Record<string, string> = {}) {
-  installStorage(preferences);
+// renderApp 挂载完整应用。
+function renderApp() {
   return render(
     <ThemeProvider>
       <App />
@@ -122,19 +127,13 @@ function renderApp(preferences: Record<string, string> = {}) {
   );
 }
 
-// installStorage 为测试运行时注入可控的 localStorage 实现。
-function installStorage(preferences: Record<string, string>) {
-  const store = new Map(Object.entries(preferences));
-  const storage = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => void store.set(key, value),
-    removeItem: (key: string) => void store.delete(key),
-    clear: () => store.clear(),
-  };
-  Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
+// unlockAdmin 通过输入口令进入管理态。
+async function unlockAdmin(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByPlaceholderText('输入管理口令'), 'lan-share-admin');
+  await user.click(screen.getByRole('button', { name: '解锁管理能力' }));
 }
 
-// stubFetch 按当前请求路径返回测试所需的资产数据。
+// stubFetch 按当前请求路径返回测试所需的资产数据并支持编辑更新。
 function stubFetch(seedAssets: Asset[]) {
   const items = [...seedAssets];
   const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -144,6 +143,9 @@ function stubFetch(seedAssets: Asset[]) {
     }
     if (url === '/api/v1/admin/unlock') {
       return jsonResponse({ ok: true });
+    }
+    if (init?.method === 'PATCH') {
+      return jsonResponse(updateExistingAsset(items, url.split('/').pop() ?? '', init.body));
     }
     if (init?.method === 'DELETE') {
       removeAsset(items, url.split('/').pop() ?? '');
@@ -160,6 +162,22 @@ function filterAssets(items: Asset[], url: string): Asset[] {
   const requestUrl = new URL(url, 'http://localhost');
   const kind = requestUrl.searchParams.get('kind');
   return kind ? items.filter((item) => item.kind === kind) : items;
+}
+
+// updateExistingAsset 根据 PATCH 请求体更新测试资产并返回最新内容。
+function updateExistingAsset(items: Asset[], id: string, body: BodyInit | null | undefined): Asset {
+  const payload = JSON.parse(String(body ?? '{}')) as { title?: string; content?: string };
+  const index = items.findIndex((item) => item.id === id);
+  const current = items[index];
+  const next = current.kind === 'snippet' ? applySnippetUpdate(current, payload) : { ...current, title: payload.title ?? current.title };
+  items.splice(index, 1, next);
+  return next;
+}
+
+// applySnippetUpdate 把便签编辑请求映射为新的测试资产对象。
+function applySnippetUpdate(asset: Asset, payload: { title?: string; content?: string }): Asset {
+  const content = payload.content ?? asset.textContent ?? '';
+  return { ...asset, title: payload.title ?? asset.title, textContent: content, sizeBytes: content.length, charCount: content.length };
 }
 
 // removeAsset 从测试资产数组中删除指定资产。

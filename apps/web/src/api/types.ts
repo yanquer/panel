@@ -24,3 +24,8 @@ export interface Asset {
 export interface AssetListResponse {
   items: Asset[];
 }
+
+export interface UpdateAssetInput {
+  title: string;
+  content?: string;
+}

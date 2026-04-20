@@ -45,6 +45,63 @@ func TestUnlockAndDelete(t *testing.T) {
 	}
 }
 
+// TestUpdateAsset 验证编辑接口的鉴权、成功和非法输入场景。
+func TestUpdateAsset(t *testing.T) {
+	router := newTestRouter(t)
+	assetID := createSnippetThroughAPI(t, router)
+	body, _ := json.Marshal(map[string]string{"title": "新便签", "content": "更新后的正文"})
+	request := httptest.NewRequest(stdhttp.MethodPatch, "/api/v1/assets/"+assetID, bytes.NewReader(body))
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != stdhttp.StatusUnauthorized {
+		t.Fatalf("expected unauthorized, got %d", response.Code)
+	}
+	request = httptest.NewRequest(stdhttp.MethodPatch, "/api/v1/assets/"+assetID, bytes.NewReader(body))
+	request.AddCookie(unlockCookie(t, router))
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("expected ok, got %d", response.Code)
+	}
+	updated := domain.Asset{}
+	_ = json.Unmarshal(response.Body.Bytes(), &updated)
+	if updated.Title != "新便签" || updated.TextContent != "更新后的正文" {
+		t.Fatalf("unexpected updated asset: %+v", updated)
+	}
+}
+
+// TestUpdateAssetErrors 验证编辑接口的非法输入和不存在资源会返回正确状态。
+func TestUpdateAssetErrors(t *testing.T) {
+	router := newTestRouter(t)
+	cookie := unlockCookie(t, router)
+	request := httptest.NewRequest(stdhttp.MethodPatch, "/api/v1/assets/missing", bytes.NewReader([]byte(`{"title":"缺失"}`)))
+	request.AddCookie(cookie)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != stdhttp.StatusNotFound {
+		t.Fatalf("expected not found, got %d", response.Code)
+	}
+	request = httptest.NewRequest(stdhttp.MethodPatch, "/api/v1/assets/missing", bytes.NewReader([]byte(`{`)))
+	request.AddCookie(cookie)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != stdhttp.StatusBadRequest {
+		t.Fatalf("expected bad request, got %d", response.Code)
+	}
+}
+
+// TestOptionsAllowsPatch 验证跨域预检声明了 PATCH 方法。
+func TestOptionsAllowsPatch(t *testing.T) {
+	router := newTestRouter(t)
+	request := httptest.NewRequest(stdhttp.MethodOptions, "/api/v1/assets/demo", nil)
+	request.Header.Set("Origin", "http://localhost:4173")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Header().Get("Access-Control-Allow-Methods") != "GET,POST,PATCH,DELETE,OPTIONS" {
+		t.Fatalf("unexpected allow methods: %s", response.Header().Get("Access-Control-Allow-Methods"))
+	}
+}
+
 // TestUploadAndList 验证文件上传后能在列表接口中查询到。
 func TestUploadAndList(t *testing.T) {
 	router := newTestRouter(t)
@@ -128,6 +185,15 @@ func (r *testRepo) List(_ context.Context, filter domain.ListFilter) ([]domain.A
 		}
 	}
 	return items, nil
+}
+
+// Update 在内存仓储中覆盖指定资产记录。
+func (r *testRepo) Update(_ context.Context, asset domain.Asset) (domain.Asset, error) {
+	if _, ok := r.items[asset.ID]; !ok {
+		return domain.Asset{}, domain.ErrAssetNotFound
+	}
+	r.items[asset.ID] = asset
+	return asset, nil
 }
 
 // Delete 从内存仓储中移除资产记录。

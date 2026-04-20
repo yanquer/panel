@@ -1,4 +1,4 @@
-// 端到端测试文件用于验证桌面与移动端关键交互链路，解决共享页面 UI 功能回归问题。
+// 端到端测试文件用于验证备忘录式工作区在桌面与移动端的浏览和管理员编辑能力，避免核心交互链路回归。
 import { expect, test } from '@playwright/test';
 
 const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4XmP4DwQACfsD/aDGNzUAAAAASUVORK5CYII=', 'base64');
@@ -26,42 +26,58 @@ test.beforeEach(async ({ page }) => {
   await installRoutes(page);
 });
 
-// 桌面端链路覆盖从卡片切换到 Finder 列表并查看图片详情。
-test('桌面端可切换到 Finder 列表并查看详情', async ({ page }, testInfo) => {
+// 桌面端覆盖过滤图片列表后进入大图内容画布查看详情。
+test('桌面端可过滤列表并查看图片内容画布', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
   await page.goto('/');
-  await page.getByRole('tab', { name: '列表', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Finder 列表' })).toBeVisible();
+  await page.getByRole('tab', { name: '图片', exact: true }).click();
+  await expect(page.getByRole('region', { name: '共享列表', exact: true })).toContainText('窗边照片');
   await page.getByRole('button', { name: /窗边照片/ }).click();
-  await expect(page.getByRole('region', { name: '详情内容' })).toBeVisible();
-  await expect(page.locator('.detail img[alt="窗边照片"]')).toBeVisible();
+  await expect(page.getByRole('region', { name: '内容画布' }).locator('img[alt="窗边照片"]')).toBeVisible();
 });
 
-// 桌面端链路覆盖切到表格视图后仍可完成删除操作。
-test('桌面端可切换到表格列表并完成删除链路', async ({ page }, testInfo) => {
+// 桌面端覆盖管理员编辑便签后的保存链路。
+test('桌面端管理员可编辑便签并保存', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
   await page.goto('/');
-  await page.locator('input[type="file"]').setInputFiles({ name: 'new-shot.png', mimeType: 'image/png', buffer: tinyPng });
-  await page.getByPlaceholder('输入管理口令').fill('lan-share-admin');
-  await page.getByRole('button', { name: '解锁删除能力' }).click();
-  await page.getByRole('tab', { name: '列表', exact: true }).click();
-  await page.getByRole('tab', { name: '表格', exact: true }).click();
-  await expect(page.getByRole('region', { name: '表格式列表' })).toContainText('名称');
-  await page.getByRole('button', { name: /new-shot\.png/ }).click();
-  await page.getByRole('button', { name: '删除', exact: true }).click();
-  await expect(page.getByText('new-shot.png')).toHaveCount(0);
+  await unlockAdmin(page);
+  await page.getByPlaceholder('输入共享标题').fill('修订后的便签');
+  await page.getByPlaceholder('输入便签正文').fill('新的便签正文');
+  await page.getByRole('button', { name: '保存更改' }).click();
+  await expect(page.getByRole('button', { name: /修订后的便签/ })).toBeVisible();
+  await expect(page.getByPlaceholder('输入便签正文')).toHaveValue('新的便签正文');
 });
 
-// 移动端链路覆盖切换到列表视图后依旧可查看详情。
-test('移动端切到列表视图后仍可查看详情', async ({ page }, testInfo) => {
+// 桌面端覆盖管理员重命名图片标题。
+test('桌面端管理员可重命名图片标题', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
+  await unlockAdmin(page);
+  await page.getByRole('button', { name: /窗边照片/ }).click();
+  const titleInput = page.getByPlaceholder('输入共享标题');
+  await titleInput.fill('封面图片');
+  await page.getByRole('button', { name: '保存更改' }).click();
+  await expect(page.getByRole('button', { name: /封面图片/ })).toBeVisible();
+  await expect(titleInput).toHaveValue('封面图片');
+});
+
+// 移动端覆盖内容优先布局下的管理员便签编辑链路。
+test('移动端内容优先布局下仍可保存便签编辑', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
   await page.goto('/');
-  await page.getByRole('tab', { name: '列表', exact: true }).click();
-  await page.locator('input[type="file"]').setInputFiles({ name: 'phone-shot.png', mimeType: 'image/png', buffer: tinyPng });
-  await expect(page.getByRole('region', { name: 'Finder 列表' })).toBeVisible();
-  await page.getByRole('button', { name: /phone-shot\.png/ }).click();
-  await expect(page.getByRole('complementary').getByRole('heading', { name: 'phone-shot.png' })).toBeVisible();
+  await unlockAdmin(page);
+  await page.getByPlaceholder('输入共享标题').fill('手机便签');
+  await page.getByPlaceholder('输入便签正文').fill('移动端也能保存');
+  await page.getByRole('button', { name: '保存更改' }).click();
+  await expect(page.getByRole('button', { name: /手机便签/ })).toBeVisible();
+  await expect(page.getByPlaceholder('输入便签正文')).toHaveValue('移动端也能保存');
 });
+
+// unlockAdmin 输入管理员口令并解锁编辑能力。
+async function unlockAdmin(page: Parameters<typeof test.beforeEach>[0]['page']) {
+  await page.getByPlaceholder('输入管理口令').fill('lan-share-admin');
+  await page.getByRole('button', { name: '解锁管理能力' }).click();
+}
 
 // installRoutes 为页面注入带状态的模拟 API 服务。
 async function installRoutes(page: Parameters<typeof test.beforeEach>[0]['page']) {
@@ -83,6 +99,9 @@ async function installRoutes(page: Parameters<typeof test.beforeEach>[0]['page']
     if (request.method() === 'POST' && url.pathname === '/api/v1/admin/unlock') {
       return route.fulfill(json({ ok: true }));
     }
+    if (request.method() === 'PATCH' && url.pathname.startsWith('/api/v1/assets/')) {
+      return route.fulfill(json(updateAsset(assets, url.pathname.split('/').pop() ?? '', await request.postDataJSON())));
+    }
     if (request.method() === 'DELETE' && url.pathname.startsWith('/api/v1/assets/')) {
       removeAsset(assets, url.pathname.split('/').pop() ?? '');
       return route.fulfill(json({ ok: true }));
@@ -100,14 +119,30 @@ async function installRoutes(page: Parameters<typeof test.beforeEach>[0]['page']
 // seedAssets 提供页面初始展示所需的模拟资产集合。
 function seedAssets(): Asset[] {
   return [
+    { id: 'seed-snippet', kind: 'snippet', title: '欢迎便签', textContent: '拖一张图片，或写下一段文字。', originalName: 'snippet.txt', mimeType: 'text/plain', sizeBytes: 32, sha256: 'hash-snippet', previewKind: 'text', charCount: 14, storageDriver: 'local', uploaderIp: '192.168.1.21', createdAt: '2026-04-17T10:10:00.000Z' },
     { id: 'seed-image', kind: 'image', title: '窗边照片', originalName: 'window.png', mimeType: 'image/png', sizeBytes: 2048, sha256: 'hash-image', previewKind: 'image', width: 1440, height: 900, storageDriver: 'minio', uploaderIp: '192.168.1.20', createdAt: '2026-04-17T10:00:00.000Z' },
-    { id: 'seed-snippet', kind: 'snippet', title: '欢迎', textContent: '拖一张图片，或写下一段文字。', originalName: 'snippet.txt', mimeType: 'text/plain', sizeBytes: 32, sha256: 'hash-snippet', previewKind: 'text', charCount: 14, storageDriver: 'local', uploaderIp: '192.168.1.21', createdAt: '2026-04-17T10:10:00.000Z' },
   ];
 }
 
 // filterAssets 根据查询参数过滤返回的资产列表。
 function filterAssets(items: Asset[], kind: string | null): Asset[] {
   return kind ? items.filter((item) => item.kind === kind) : items;
+}
+
+// updateAsset 把 PATCH 请求体映射到模拟资产状态中。
+function updateAsset(items: Asset[], id: string, payload: unknown): Asset {
+  const input = payload as { title?: string; content?: string };
+  const index = items.findIndex((item) => item.id === id);
+  const current = items[index];
+  const next = current.kind === 'snippet' ? updateSnippetAsset(current, input) : { ...current, title: input.title ?? current.title };
+  items.splice(index, 1, next);
+  return next;
+}
+
+// updateSnippetAsset 构造便签编辑后的模拟返回值。
+function updateSnippetAsset(asset: Asset, input: { title?: string; content?: string }): Asset {
+  const content = input.content ?? asset.textContent ?? '';
+  return { ...asset, title: input.title ?? asset.title, textContent: content, sizeBytes: content.length, charCount: content.length };
 }
 
 // createSnippetAsset 构造新建文字便签的模拟返回值。

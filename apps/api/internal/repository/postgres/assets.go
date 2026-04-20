@@ -53,6 +53,18 @@ func (r AssetRepository) List(ctx context.Context, filter domain.ListFilter) ([]
 	return scanAssets(rows)
 }
 
+// Update 更新指定资产的可编辑元数据字段。
+func (r AssetRepository) Update(ctx context.Context, asset domain.Asset) (domain.Asset, error) {
+	result, err := r.pool.Exec(ctx, updateSQL, updateArgs(asset)...)
+	if err != nil {
+		return domain.Asset{}, err
+	}
+	if result.RowsAffected() == 0 {
+		return domain.Asset{}, domain.ErrAssetNotFound
+	}
+	return asset, nil
+}
+
 // Delete 删除指定资产记录。
 func (r AssetRepository) Delete(ctx context.Context, id string) error {
 	result, err := r.pool.Exec(ctx, "DELETE FROM assets WHERE id = $1", id)
@@ -118,6 +130,11 @@ func toArgs(asset domain.Asset) []any {
 	return []any{asset.ID, asset.Kind, asset.Title, asset.TextContent, asset.OriginalName, asset.StoredKey, asset.MimeType, asset.SizeBytes, asset.SHA256, asset.PreviewKind, asset.Width, asset.Height, asset.CharCount, asset.StorageDriver, asset.UploaderIP, asset.CreatedAt}
 }
 
+// updateArgs 把可编辑资产字段展开为 SQL 更新参数。
+func updateArgs(asset domain.Asset) []any {
+	return []any{asset.Title, asset.TextContent, asset.MimeType, asset.SizeBytes, asset.SHA256, asset.CharCount, asset.ID}
+}
+
 // mapNotFound 把无结果错误映射为统一业务错误。
 func mapNotFound(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -139,6 +156,16 @@ INSERT INTO assets (
   $1, $2, $3, $4, $5, $6, $7, $8,
   $9, $10, $11, $12, $13, $14, $15, $16
 )`
+
+const updateSQL = `
+UPDATE assets
+SET title = $1,
+    text_content = $2,
+    mime_type = $3,
+    size_bytes = $4,
+    sha256 = $5,
+    char_count = $6
+WHERE id = $7`
 
 var schemaSQL = strings.TrimSpace(fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS assets (

@@ -46,7 +46,7 @@ export function assetKindLabel(asset: Asset): string {
     return '图片';
   }
   if (asset.kind === 'snippet') {
-    return '文字';
+    return '便签';
   }
   return '文件';
 }
@@ -54,7 +54,12 @@ export function assetKindLabel(asset: Asset): string {
 // assetSummary 返回资产在列表中使用的次级摘要文本。
 export function assetSummary(asset: Asset): string {
   if (asset.kind === 'snippet') {
-    return asset.textContent ?? '文字便签';
+    return compactText(asset.textContent ?? '文字便签');
   }
   return asset.originalName;
+}
+
+// compactText 把多行文字压缩为更适合列表摘要的一行内容。
+function compactText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
 }

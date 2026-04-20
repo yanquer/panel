@@ -14,8 +14,8 @@ export function UploadDropzone({ busy, onUpload }: Props) {
     <section className="panel panel--glass">
       <span className="meta-label">Air Corridor</span>
       <div>
-        <h2 className="asset-title">拖入图片或文件</h2>
-        <p className="muted">支持截图、照片、PDF、压缩包与常见文档，上传后会立即出现在共享流中。</p>
+        <h2 className="panel__title">拖入图片或文件</h2>
+        <p className="panel__description">支持截图、照片、PDF、压缩包与常见文档，上传后会立即出现在中间共享流里。</p>
       </div>
       <button className="dropzone" onClick={() => inputRef.current?.click()} onDragOver={preventDefault} onDrop={(event) => void handleDrop(event, onUpload)}>
         <strong>轻点选择，或直接拖进来</strong>

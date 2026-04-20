@@ -5,8 +5,8 @@ export function EmptyState() {
     <section className="empty">
       <span className="empty__glyph">⌘</span>
       <div>
-        <h2 className="asset-title">还没有共享内容</h2>
-        <p className="muted">先写一段文字，或拖一张图片进来。第一条内容出现后，这里会自动形成共享流。</p>
+        <h2 className="empty__title">还没有共享内容</h2>
+        <p className="muted">先写一段文字，或拖一张图片进来。第一条内容出现后，中间列表会自动形成共享流。</p>
       </div>
     </section>
   );
