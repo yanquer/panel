@@ -1,13 +1,15 @@
 // 应用主页面文件用于组装顶部操作区与双列工作区，解决共享流、编辑区和快捷操作入口分散的问题。
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AssetDetailPanel } from '../features/assets/AssetDetailPanel';
 import { AssetGrid } from '../features/assets/AssetGrid';
 import { EmptyState } from '../features/assets/EmptyState';
 import { useAssetWorkspace } from '../features/assets/useAssetWorkspace';
 import { AdminUnlockForm } from '../features/auth/AdminUnlockForm';
 import { QuickCreatePanel } from '../features/upload/QuickCreatePanel';
+import { FloatingNotice } from '../shared/components/FloatingNotice';
 import { SegmentedControl } from '../shared/components/SegmentedControl';
 import { ModalShell } from '../shared/components/ModalShell';
+import { feedbackDuration } from '../shared/lib/feedback';
 import { ThemeToggle } from '../shared/components/ThemeToggle';
 import { ToolbarIconButton } from '../shared/components/ToolbarIconButton';
 
@@ -26,6 +28,14 @@ export function App(): JSX.Element {
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const listStatus = workspace.loading ? '正在刷新共享流…' : workspace.items.length === 0 ? '共享流暂时为空' : `共享流中共有 ${workspace.items.length} 项`;
   const workspaceStatus = workspace.loading ? '共享流正在同步更新…' : workspace.message;
+
+  useEffect(() => {
+    if (!workspace.notice) {
+      return;
+    }
+    const timeoutId = window.setTimeout(workspace.dismissNotice, feedbackDuration(workspace.notice.tone));
+    return () => window.clearTimeout(timeoutId);
+  }, [workspace.dismissNotice, workspace.notice]);
 
   // handleUnlock 完成管理态解锁后关闭当前弹窗。
   async function handleUnlock(password: string): Promise<void> {
@@ -86,11 +96,12 @@ export function App(): JSX.Element {
               <SegmentedControl ariaLabel="资产过滤" value={workspace.filter} options={filterOptions} onChange={workspace.setFilter} />
             </div>
             <p className="notes-list__status muted">{listStatus}</p>
-            {workspace.items.length === 0 && !workspace.loading ? <EmptyState /> : <AssetGrid items={workspace.items} selectedId={workspace.selectedId} onSelect={workspace.selectAsset} />}
+            {workspace.items.length === 0 && !workspace.loading ? <EmptyState /> : <AssetGrid items={workspace.items} selectedId={workspace.selectedId} onCopy={workspace.copyAsset} onSelect={workspace.selectAsset} />}
           </section>
-          <AssetDetailPanel asset={workspace.selectedAsset} busy={workspace.busy} adminUnlocked={workspace.adminUnlocked} onDelete={workspace.remove} onSave={workspace.saveAsset} />
+          <AssetDetailPanel asset={workspace.selectedAsset} busy={workspace.busy} adminUnlocked={workspace.adminUnlocked} onCopy={workspace.copyAsset} onDelete={workspace.remove} onSave={workspace.saveAsset} />
         </main>
       </div>
+      <FloatingNotice notice={workspace.notice} />
       <ModalShell open={activeDialog === 'admin'} onClose={() => setActiveDialog(null)} title="管理模式" description="输入管理口令后，可编辑标题、便签正文并删除共享项。">
         <AdminUnlockForm busy={workspace.busy} unlocked={workspace.adminUnlocked} onUnlock={handleUnlock} />
       </ModalShell>

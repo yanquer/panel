@@ -97,6 +97,7 @@ dd {
 .unlock-form,
 .modal-shell__title-block,
 .modal-shell__body,
+.floating-notice,
 .empty,
 .detail__empty {
   display: grid;
@@ -134,6 +135,56 @@ dd {
 
 .workspace-hero__status {
   min-height: 1.5rem;
+}
+
+.floating-notice-layer {
+  position: fixed;
+  top: clamp(1rem, 2vw, 1.6rem);
+  left: 50%;
+  z-index: 50;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.floating-notice {
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: min(28rem, calc(100vw - 2rem));
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--blur-panel);
+  animation: notice-enter var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.floating-notice[data-tone='error'] {
+  border-color: color-mix(in srgb, rgba(197, 56, 78, 0.4) 72%, var(--border-soft));
+}
+
+.floating-notice__icon {
+  width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.floating-notice[data-tone='error'] .floating-notice__icon {
+  background: color-mix(in srgb, rgba(217, 84, 101, 0.18) 88%, transparent);
+  color: rgba(197, 56, 78, 0.98);
+}
+
+.floating-notice__text {
+  color: var(--text-primary);
+  line-height: 1.4;
 }
 
 .workspace-hero__toolbar {
@@ -615,6 +666,19 @@ dd {
   color: var(--text-tertiary);
 }
 
+.note-list__action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.note-list__action:focus-visible,
+.note-list__action:hover {
+  text-decoration: underline;
+}
+
 .detail__chrome,
 .detail__editor,
 .detail__actions-panel {
@@ -799,6 +863,18 @@ dd {
   background: color-mix(in srgb, var(--accent), white 10%);
 }
 
+@keyframes notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 1260px) {
   .workspace-hero,
   .notes-main {
@@ -879,5 +955,11 @@ dd {
     max-height: min(82vh, 46rem);
     padding: 1.15rem 1rem 1rem;
     border-radius: 28px 28px 0 0;
+  }
+
+  .floating-notice {
+    min-width: calc(100vw - 1.5rem);
+    padding-inline: 0.9rem;
+    border-radius: 24px;
   }
 }

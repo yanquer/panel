@@ -37,6 +37,17 @@ test('桌面端可过滤列表并查看图片内容画布', async ({ page }, tes
   await expect(page.getByRole('region', { name: '内容画布' }).locator('img[alt="窗边照片"]')).toBeVisible();
 });
 
+// 桌面端覆盖便签复制按钮与顶部提示。
+test('桌面端文字资产支持复制并显示顶部提示', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await installClipboardMock(page);
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: '复制内容' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '复制', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '复制内容' }).click();
+  await expect(page.getByRole('status')).toContainText('文字已复制到剪贴板。');
+});
+
 // 桌面端覆盖顶部三个操作入口和快捷新建弹窗开启行为。
 test('桌面端顶部操作区可打开管理与快捷新建弹窗', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
@@ -115,6 +126,15 @@ test('移动端顶部工具栏仍可切换主题并打开快捷新建', async ({
   await expect(page.getByPlaceholder('输入将要共享的文字')).toBeVisible();
 });
 
+// 移动端覆盖便签复制后的顶部提示。
+test('移动端文字资产复制后仍显示顶部提示', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile');
+  await installClipboardMock(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: '复制内容' }).click();
+  await expect(page.getByRole('status')).toContainText('文字已复制到剪贴板。');
+});
+
 // 移动端覆盖内容优先布局下的管理员便签编辑链路。
 test('移动端内容优先布局下仍可保存便签编辑', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
@@ -134,6 +154,16 @@ async function unlockAdmin(page: Parameters<typeof test.beforeEach>[0]['page']) 
   await dialog.getByPlaceholder('输入管理口令').fill('lan-share-admin');
   await dialog.getByRole('button', { name: '解锁管理能力' }).click();
   await expect(dialog).toBeHidden();
+}
+
+// installClipboardMock 为页面注入成功返回的剪贴板写入接口。
+async function installClipboardMock(page: Parameters<typeof test.beforeEach>[0]['page']) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => undefined },
+    });
+  });
 }
 
 // installRoutes 为页面注入带状态的模拟 API 服务。

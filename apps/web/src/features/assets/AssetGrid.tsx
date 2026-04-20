@@ -6,22 +6,23 @@ import { assetGlyph, assetKindLabel, assetSummary, formatDate } from '../../shar
 interface Props {
   items: Asset[];
   selectedId: string | null;
+  onCopy: (asset: Asset) => Promise<void>;
   onSelect: (assetId: string) => void;
 }
 
 // AssetGrid 按备忘录列表样式渲染当前共享项集合。
-export function AssetGrid({ items, selectedId, onSelect }: Props): JSX.Element {
+export function AssetGrid({ items, selectedId, onCopy, onSelect }: Props): JSX.Element {
   return (
     <div className="note-list" role="region" aria-label="共享列表">
-      {items.map((asset) => <AssetRow key={asset.id} asset={asset} active={asset.id === selectedId} onSelect={onSelect} />)}
+      {items.map((asset) => <AssetRow key={asset.id} asset={asset} active={asset.id === selectedId} onCopy={onCopy} onSelect={onSelect} />)}
     </div>
   );
 }
 
 // AssetRow 渲染单条共享记录的标题、摘要、时间与类型信息。
-function AssetRow({ asset, active, onSelect }: { asset: Asset; active: boolean; onSelect: (assetId: string) => void }): JSX.Element {
+function AssetRow({ asset, active, onCopy, onSelect }: { asset: Asset; active: boolean; onCopy: (asset: Asset) => Promise<void>; onSelect: (assetId: string) => void }): JSX.Element {
   return (
-    <button className="note-list__row" data-active={active} onClick={() => onSelect(asset.id)}>
+    <div className="note-list__row" data-active={active} role="button" tabIndex={0} onClick={() => onSelect(asset.id)} onKeyDown={(event) => handleRowKeydown(event, asset.id, onSelect)}>
       <AssetRowVisual asset={asset} />
       <div className="note-list__body">
         <div className="note-list__header">
@@ -31,10 +32,31 @@ function AssetRow({ asset, active, onSelect }: { asset: Asset; active: boolean; 
         <p className="note-list__summary">{assetSummary(asset)}</p>
         <div className="note-list__meta">
           <span className="note-list__kind">{assetKindLabel(asset)}</span>
-          <a href={contentUrl(asset.id)} onClick={(event) => event.stopPropagation()}>下载</a>
+          <AssetRowAction asset={asset} onCopy={onCopy} />
         </div>
       </div>
+    </div>
+  );
+}
+
+// handleRowKeydown 让列表行支持键盘 Enter 和空格选中。
+function handleRowKeydown(event: React.KeyboardEvent<HTMLDivElement>, assetId: string, onSelect: (assetId: string) => void): void {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    onSelect(assetId);
+  }
+}
+
+// AssetRowAction 根据资产类型渲染复制或下载入口。
+function AssetRowAction({ asset, onCopy }: { asset: Asset; onCopy: (asset: Asset) => Promise<void> }): JSX.Element {
+  return asset.kind === 'snippet' ? (
+    <button className="note-list__action" type="button" onClick={(event) => { event.stopPropagation(); void onCopy(asset); }}>
+      复制
     </button>
+  ) : (
+    <a className="note-list__action" href={contentUrl(asset.id)} onClick={(event) => event.stopPropagation()}>
+      下载
+    </a>
   );
 }
 

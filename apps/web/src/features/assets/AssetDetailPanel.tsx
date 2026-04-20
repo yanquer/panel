@@ -8,12 +8,13 @@ interface Props {
   asset: Asset | null;
   busy: boolean;
   adminUnlocked: boolean;
+  onCopy: (asset: Asset) => Promise<void>;
   onDelete: (assetId: string) => Promise<void>;
   onSave: (assetId: string, input: UpdateAssetInput) => Promise<Asset>;
 }
 
 // AssetDetailPanel 渲染当前选中共享项的阅读、编辑和管理操作区域。
-export function AssetDetailPanel({ asset, busy, adminUnlocked, onDelete, onSave }: Props): JSX.Element {
+export function AssetDetailPanel({ asset, busy, adminUnlocked, onCopy, onDelete, onSave }: Props): JSX.Element {
   const editor = useAssetEditor(asset, onSave);
 
   if (!asset) {
@@ -51,7 +52,7 @@ export function AssetDetailPanel({ asset, busy, adminUnlocked, onDelete, onSave 
       <div className="detail__content" role="region" aria-label="内容画布">
         <PreviewStage asset={asset} adminUnlocked={adminUnlocked} busy={busy} content={editor.draft.content} onChange={editor.setContent} />
       </div>
-      <AdminActions asset={asset} adminUnlocked={adminUnlocked} busy={busy} dirty={editor.dirty} isSnippet={editor.isSnippet} onDelete={onDelete} onReset={editor.reset} onSave={editor.save} />
+      <AdminActions asset={asset} adminUnlocked={adminUnlocked} busy={busy} dirty={editor.dirty} isSnippet={editor.isSnippet} onCopy={onCopy} onDelete={onDelete} onReset={editor.reset} onSave={editor.save} />
       <PropertyGrid asset={asset} />
     </aside>
   );
@@ -100,20 +101,31 @@ function PreviewStage({ asset, adminUnlocked, busy, content, onChange }: { asset
 }
 
 // AdminActions 渲染管理员可见的保存、重置与删除操作区。
-function AdminActions({ asset, adminUnlocked, busy, dirty, isSnippet, onDelete, onReset, onSave }: { asset: Asset; adminUnlocked: boolean; busy: boolean; dirty: boolean; isSnippet: boolean; onDelete: (assetId: string) => Promise<void>; onReset: () => void; onSave: () => Promise<Asset | null> }): JSX.Element {
+function AdminActions({ asset, adminUnlocked, busy, dirty, isSnippet, onCopy, onDelete, onReset, onSave }: { asset: Asset; adminUnlocked: boolean; busy: boolean; dirty: boolean; isSnippet: boolean; onCopy: (asset: Asset) => Promise<void>; onDelete: (assetId: string) => Promise<void>; onReset: () => void; onSave: () => Promise<Asset | null> }): JSX.Element {
   return (
     <section className="detail__actions-panel" aria-label="管理员操作">
       <div className="detail__actions-copy">
         <span className="field-label">管理员操作</span>
-        <p className="muted">{adminUnlocked ? (isSnippet ? '保存会同步更新便签正文与标题。' : '保存会更新当前共享项的展示标题。') : '当前仅支持下载和浏览内容。'}</p>
+        <p className="muted">{adminUnlocked ? (isSnippet ? '保存会同步更新便签正文与标题。' : '保存会更新当前共享项的展示标题。') : asset.kind === 'snippet' ? '当前支持复制和浏览内容。' : '当前仅支持下载和浏览内容。'}</p>
       </div>
       <div className="detail__actions">
-        <a className="button" href={contentUrl(asset.id)}>下载内容</a>
+        <PrimaryReadAction asset={asset} onCopy={onCopy} />
         {adminUnlocked ? <button className="button" disabled={busy || !dirty} onClick={onReset}>取消修改</button> : null}
         {adminUnlocked ? <button className="button button--primary" disabled={busy || !dirty} onClick={() => void onSave()}>保存更改</button> : null}
         {adminUnlocked ? <button className="button button--danger" disabled={busy} onClick={() => void onDelete(asset.id)}>删除</button> : null}
       </div>
     </section>
+  );
+}
+
+// PrimaryReadAction 根据资产类型渲染复制或下载主按钮。
+function PrimaryReadAction({ asset, onCopy }: { asset: Asset; onCopy: (asset: Asset) => Promise<void> }): JSX.Element {
+  return asset.kind === 'snippet' ? (
+    <button className="button" type="button" onClick={() => void onCopy(asset)}>
+      复制内容
+    </button>
+  ) : (
+    <a className="button" href={contentUrl(asset.id)}>下载内容</a>
   );
 }
 

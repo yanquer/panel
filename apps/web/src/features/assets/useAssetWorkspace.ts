@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Asset, AssetKind, UpdateAssetInput } from '../../api/types';
 import { createSnippet, deleteAsset, fetchAssets, unlockAdmin, updateAsset, uploadFile } from '../../api/client';
+import { copyText } from '../../shared/lib/clipboard';
+import type { FeedbackNotice, FeedbackTone } from '../../shared/lib/feedback';
 
 export type AssetFilter = AssetKind | 'all';
 
@@ -13,6 +15,7 @@ interface WorkspaceState {
   selectedId: string | null;
   message: string;
   adminUnlocked: boolean;
+  notice: FeedbackNotice | null;
 }
 
 // useAssetWorkspace 集中管理页面所需的资产状态和交互动作。
@@ -33,6 +36,11 @@ export function useAssetWorkspace() {
   // selectAsset 记录当前详情面板选中的资产。
   const selectAsset = useCallback((assetId: string | null) => {
     setState((current) => ({ ...current, selectedId: assetId }));
+  }, []);
+
+  // dismissNotice 清除当前顶部提示。
+  const dismissNotice = useCallback(() => {
+    setState((current) => (current.notice ? { ...current, notice: null } : current));
   }, []);
 
   // submitSnippet 提交新的文字便签并刷新列表。
@@ -80,7 +88,18 @@ export function useAssetWorkspace() {
     });
   }, []);
 
-  return { ...state, selectedAsset, saveAsset, setFilter, selectAsset, submitSnippet, submitFiles, unlock, remove };
+  // copyAsset 复制文字资产内容并写入提示反馈。
+  const copyAsset = useCallback(async (asset: Asset) => {
+    const text = getAssetCopyText(asset);
+    try {
+      await copyText(text);
+      publishNotice('success', '文字已复制到剪贴板。');
+    } catch {
+      publishNotice('error', '复制失败，请手动选中文本。');
+    }
+  }, []);
+
+  return { ...state, selectedAsset, copyAsset, dismissNotice, saveAsset, setFilter, selectAsset, submitSnippet, submitFiles, unlock, remove };
 
   // refresh 重新加载资产列表并保持当前选中状态尽量稳定。
   async function refresh(filter: AssetFilter) {
@@ -105,6 +124,11 @@ export function useAssetWorkspace() {
       throw error;
     }
   }
+
+  // publishNotice 同步更新顶部提示和页面状态文案。
+  function publishNotice(tone: FeedbackTone, message: string): void {
+    setState((current) => ({ ...current, message, notice: { tone, message } }));
+  }
 }
 
 // createInitialState 创建包含本地视图偏好的初始工作区状态。
@@ -117,6 +141,7 @@ function createInitialState(): WorkspaceState {
     selectedId: null,
     message: '局域网就绪，拖入内容即可共享。',
     adminUnlocked: false,
+    notice: null,
   };
 }
 
@@ -131,6 +156,11 @@ function keepSelection(selectedId: string | null, items: Asset[]): string | null
 // getErrorMessage 把未知异常统一转换为可读提示语。
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '操作失败，请稍后再试';
+}
+
+// getAssetCopyText 读取文字资产的复制内容并在空文本时回退标题。
+function getAssetCopyText(asset: Asset): string {
+  return asset.textContent?.trim() ? asset.textContent : asset.title;
 }
 
 // replaceAsset 用最新的资产内容覆盖列表中的旧项并保持顺序不变。

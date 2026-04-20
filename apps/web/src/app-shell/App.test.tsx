@@ -140,6 +140,36 @@ async function TestQuickCreateUploadFlow() {
 
 test('快捷新建弹窗可上传文件并进入共享流', TestQuickCreateUploadFlow);
 
+// TestSnippetCopyFlow 验证文字资产在详情区和列表区都使用复制动作并显示成功提示。
+async function TestSnippetCopyFlow() {
+  const user = userEvent.setup();
+  const clipboard = installClipboardMock();
+  stubFetch(baseAssets);
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  expect(screen.getByRole('button', { name: '复制内容' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '复制' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '复制内容' }));
+  await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith('把今天讨论的三件事同步到手机。'));
+  expect(screen.getByRole('status')).toHaveTextContent('文字已复制到剪贴板。');
+}
+
+test('文字资产复制成功时会显示顶部提示', TestSnippetCopyFlow);
+
+// TestSnippetCopyFailureFlow 验证复制失败时会显示错误提示。
+async function TestSnippetCopyFailureFlow() {
+  const user = userEvent.setup();
+  installClipboardMock().writeText.mockRejectedValueOnce(new Error('copy failed'));
+  installExecCommandMock(false);
+  stubFetch(baseAssets);
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await user.click(screen.getByRole('button', { name: '复制' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('复制失败，请手动选中文本。'));
+}
+
+test('文字资产复制失败时会显示顶部错误提示', TestSnippetCopyFailureFlow);
+
 // TestImageRenameFlow 验证图片标题编辑后会同步影响列表与详情区。
 async function TestImageRenameFlow() {
   const user = userEvent.setup();
@@ -164,6 +194,20 @@ function renderApp(): ReturnType<typeof render> {
       <App />
     </ThemeProvider>,
   );
+}
+
+// installClipboardMock 安装可控的剪贴板写入桩函数。
+function installClipboardMock() {
+  const clipboard = { writeText: vi.fn().mockResolvedValue(undefined) };
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+  return clipboard;
+}
+
+// installExecCommandMock 安装可控的 execCommand 回退桩函数。
+function installExecCommandMock(result: boolean) {
+  const execCommand = vi.fn(() => result);
+  Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+  return execCommand;
 }
 
 // openQuickCreate 打开顶部快捷新建弹窗。
