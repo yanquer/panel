@@ -23,6 +23,14 @@ docker compose up --build
 - 校验服务默认使用 `GO_SUMDB=sum.golang.google.cn`
 - 如果当前网络环境更适合其他镜像，可在 `.env` 中覆盖这些值后重新执行 `docker compose build api`
 
+## npm registry 回退链
+- `web` 镜像构建默认按顺序尝试三个 npm registry：
+  - `NPM_REGISTRY_PRIMARY=https://registry.npmmirror.com`
+  - `NPM_REGISTRY_SECONDARY=https://mirrors.cloud.tencent.com/npm/`
+  - `NPM_REGISTRY_TERTIARY=https://registry.npmjs.org`
+- 会按顺序逐个尝试安装前端依赖，前一个镜像超时或失败后再继续回退到下一个
+- 如果当前网络环境对某个镜像更友好，可在 `.env` 中把网络最好的镜像放到更靠前的位置，再重新执行 `docker compose build web`
+
 ## 切换到本地磁盘存储
 1. 在 `.env` 中把 `STORAGE_DRIVER` 改为 `local`
 2. 保留 `api` 服务上的 `./data/local-storage:/data/local-storage` 挂载

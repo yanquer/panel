@@ -7,22 +7,22 @@ interface Props {
 }
 
 // UploadDropzone 渲染拖拽和点击上传区域。
-export function UploadDropzone({ busy, onUpload }: Props) {
+export function UploadDropzone({ busy, onUpload }: Props): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <section className="panel panel--glass">
+    <div className="uploader">
       <span className="meta-label">Air Corridor</span>
-      <div>
+      <div className="quick-create__section-head">
         <h2 className="panel__title">拖入图片或文件</h2>
         <p className="panel__description">支持截图、照片、PDF、压缩包与常见文档，上传后会立即出现在中间共享流里。</p>
       </div>
-      <button className="dropzone" onClick={() => inputRef.current?.click()} onDragOver={preventDefault} onDrop={(event) => void handleDrop(event, onUpload)}>
+      <button className="dropzone" type="button" disabled={busy} onClick={() => inputRef.current?.click()} onDragOver={preventDefault} onDrop={(event) => void handleDrop(event, onUpload, busy)}>
         <strong>轻点选择，或直接拖进来</strong>
         <span className="muted">界面会自动提取图片尺寸、大小、时间等属性。</span>
       </button>
-      <input ref={inputRef} hidden multiple type="file" disabled={busy} onChange={(event) => void handleChange(event, onUpload)} />
-    </section>
+      <input ref={inputRef} hidden data-testid="quick-create-file-input" multiple type="file" disabled={busy} onChange={(event) => void handleChange(event, onUpload)} />
+    </div>
   );
 }
 
@@ -32,9 +32,9 @@ function preventDefault(event: React.DragEvent) {
 }
 
 // handleDrop 读取拖拽文件并转交上传动作。
-async function handleDrop(event: React.DragEvent, onUpload: Props['onUpload']) {
+async function handleDrop(event: React.DragEvent, onUpload: Props['onUpload'], busy: boolean) {
   event.preventDefault();
-  if (event.dataTransfer.files.length > 0) {
+  if (!busy && event.dataTransfer.files.length > 0) {
     await onUpload(event.dataTransfer.files);
   }
 }
@@ -43,5 +43,6 @@ async function handleDrop(event: React.DragEvent, onUpload: Props['onUpload']) {
 async function handleChange(event: React.ChangeEvent<HTMLInputElement>, onUpload: Props['onUpload']) {
   if (event.target.files && event.target.files.length > 0) {
     await onUpload(event.target.files);
+    event.target.value = '';
   }
 }

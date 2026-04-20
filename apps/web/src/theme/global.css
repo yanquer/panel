@@ -1,4 +1,4 @@
-/* 全局样式文件用于定义备忘录式三栏工作区和新的排版层级，解决共享列表、详情画布与操作区辨识度不足的问题。 */
+/* 全局样式文件用于定义顶部操作区与双列工作区的整体排版，解决共享列表、详情画布和快捷操作重心分散的问题。 */
 * {
   box-sizing: border-box;
 }
@@ -67,9 +67,7 @@ dd {
   max-width: 1520px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: var(--space-4);
-  align-items: start;
 }
 
 .notes-main {
@@ -79,9 +77,9 @@ dd {
   min-width: 0;
 }
 
-.notes-sidebar,
-.notes-sidebar__panels,
-.notes-sidebar__header,
+.workspace-hero,
+.workspace-hero__copy,
+.workspace-hero__intro,
 .notes-list,
 .detail,
 .detail__chrome,
@@ -90,25 +88,57 @@ dd {
 .detail__title-block,
 .detail__actions-panel,
 .detail__actions-copy,
+.quick-create,
+.quick-create__grid,
+.quick-create__section,
+.quick-create__section-head,
+.composer,
+.uploader,
+.unlock-form,
+.modal-shell__title-block,
+.modal-shell__body,
 .empty,
 .detail__empty {
   display: grid;
 }
 
-.notes-sidebar {
+.workspace-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-4);
+  padding: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.workspace-hero__copy {
   gap: var(--space-3);
 }
 
-.notes-sidebar__panels {
-  gap: var(--space-3);
+.workspace-hero__intro {
+  gap: 0.8rem;
 }
 
-.notes-sidebar__header {
-  gap: var(--space-3);
+.workspace-hero__status-line,
+.workspace-hero__toolbar,
+.notes-list__header,
+.detail__actions,
+.composer__actions,
+.unlock__actions {
+  display: flex;
 }
 
-.notes-sidebar__intro {
-  display: grid;
+.workspace-hero__status-line {
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.workspace-hero__status {
+  min-height: 1.5rem;
+}
+
+.workspace-hero__toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.8rem;
 }
 
@@ -180,25 +210,23 @@ dd {
 
 .notes-list {
   align-content: start;
-  min-height: calc(100vh - 3rem);
+  min-height: min(54rem, calc(100vh - 14rem));
 }
 
 .detail {
   align-content: start;
-  min-height: calc(100vh - 3rem);
-}
-
-.notes-list__header,
-.detail__actions,
-.composer__actions,
-.unlock__actions {
-  display: flex;
+  min-height: min(54rem, calc(100vh - 14rem));
 }
 
 .notes-list__header {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.notes-list__header-copy {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .notes-list__status {
@@ -217,12 +245,15 @@ dd {
 
 .segmented button,
 .button,
+.toolbar-button,
 .input,
 .textarea,
 .dropzone,
 .note-list__row,
 .detail__title-input,
-.detail__canvas-editor {
+.detail__canvas-editor,
+.modal-shell__close,
+.modal-shell__panel {
   transition:
     transform var(--motion-fast) ease,
     background var(--motion-fast) ease,
@@ -235,6 +266,58 @@ dd {
 .button {
   border: 0;
   border-radius: 999px;
+}
+
+.toolbar-button {
+  position: relative;
+  width: 3.25rem;
+  height: 3.25rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg-card) 42%, transparent);
+}
+
+.toolbar-button--accent {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent), white 8%), var(--accent));
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.toolbar-button.is-active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border-soft));
+  background: color-mix(in srgb, var(--accent-soft) 65%, var(--bg-card));
+}
+
+.toolbar-button__icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.toolbar-button__icon svg,
+.modal-shell__close svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.toolbar-button__dot {
+  position: absolute;
+  top: 0.72rem;
+  right: 0.72rem;
+  width: 0.54rem;
+  height: 0.54rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent), white 10%);
+  box-shadow: 0 0 0 4px var(--bg-panel);
 }
 
 .segmented button {
@@ -274,9 +357,11 @@ dd {
 }
 
 .button:not(:disabled):hover,
+.toolbar-button:not(:disabled):hover,
 .segmented button:hover,
 .dropzone:hover,
-.note-list__row:hover {
+.note-list__row:hover,
+.modal-shell__close:hover {
   transform: translateY(-1px);
 }
 
@@ -308,7 +393,10 @@ dd {
 .input:focus,
 .textarea:focus,
 .detail__title-input:focus,
-.detail__canvas-editor:focus {
+.detail__canvas-editor:focus,
+.dropzone:focus-visible,
+.toolbar-button:focus-visible,
+.modal-shell__close:focus-visible {
   outline: none;
   border-color: color-mix(in srgb, var(--accent) 48%, var(--border-soft));
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
@@ -324,6 +412,114 @@ dd {
   border-radius: 26px;
   background: linear-gradient(180deg, var(--bg-subtle), transparent);
   text-align: left;
+}
+
+.dropzone:disabled,
+.toolbar-button:disabled,
+.modal-shell__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-create {
+  gap: var(--space-3);
+}
+
+.quick-create__tip,
+.quick-create__section {
+  padding: 1.25rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+}
+
+.quick-create__tip {
+  gap: 0.65rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 76%, transparent), transparent 58%),
+    color-mix(in srgb, var(--bg-card) 84%, transparent);
+}
+
+.quick-create__lead {
+  color: var(--text-secondary);
+  line-height: 1.72;
+}
+
+.quick-create__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.quick-create__section {
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.quick-create__section-head,
+.composer,
+.uploader,
+.unlock-form {
+  gap: 0.95rem;
+}
+
+.modal-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: rgba(10, 18, 30, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.modal-shell__panel {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  gap: var(--space-3);
+  padding: clamp(1.15rem, 2vw, 1.6rem);
+  border: 1px solid var(--border-soft);
+  border-radius: 32px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-panel);
+  overscroll-behavior: contain;
+}
+
+.modal-shell__panel[data-size='wide'] {
+  width: min(60rem, calc(100vw - 2rem));
+}
+
+.modal-shell__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.modal-shell__title-block,
+.modal-shell__body {
+  gap: 0.75rem;
+}
+
+.modal-shell__title {
+  font-size: clamp(1.45rem, 3vw, 1.8rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.modal-shell__description {
+  color: var(--text-secondary);
+  line-height: 1.68;
+}
+
+.modal-shell__close {
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-subtle);
 }
 
 .note-list {
@@ -604,9 +800,13 @@ dd {
 }
 
 @media (max-width: 1260px) {
-  .notes-shell,
+  .workspace-hero,
   .notes-main {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-hero__toolbar {
+    justify-content: flex-start;
   }
 
   .notes-list,
@@ -616,6 +816,7 @@ dd {
 }
 
 @media (max-width: 860px) {
+  .quick-create__grid,
   .notes-list__header,
   .detail__chrome,
   .detail__actions-panel,
@@ -635,6 +836,11 @@ dd {
 @media (max-width: 720px) {
   .app {
     padding: 1rem;
+  }
+
+  .workspace-hero {
+    gap: var(--space-3);
+    padding: 1.2rem;
   }
 
   .note-list__row {
@@ -659,5 +865,19 @@ dd {
   .detail__canvas-editor,
   .preview__text--note {
     min-height: 20rem;
+  }
+
+  .modal-shell {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal-shell__panel,
+  .modal-shell__panel[data-size='wide'] {
+    width: 100%;
+    max-width: none;
+    max-height: min(82vh, 46rem);
+    padding: 1.15rem 1rem 1rem;
+    border-radius: 28px 28px 0 0;
   }
 }

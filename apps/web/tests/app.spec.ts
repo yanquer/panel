@@ -30,10 +30,25 @@ test.beforeEach(async ({ page }) => {
 test('桌面端可过滤列表并查看图片内容画布', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
   await page.goto('/');
+  await expect(page.getByRole('toolbar', { name: '顶部操作' })).toBeVisible();
   await page.getByRole('tab', { name: '图片', exact: true }).click();
   await expect(page.getByRole('region', { name: '共享列表', exact: true })).toContainText('窗边照片');
   await page.getByRole('button', { name: /窗边照片/ }).click();
   await expect(page.getByRole('region', { name: '内容画布' }).locator('img[alt="窗边照片"]')).toBeVisible();
+});
+
+// 桌面端覆盖顶部三个操作入口和快捷新建弹窗开启行为。
+test('桌面端顶部操作区可打开管理与快捷新建弹窗', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: '打开管理面板' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '切换到深色主题' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '打开快捷新建' })).toBeVisible();
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  await expect(page.getByRole('dialog', { name: '快捷新建' })).toBeVisible();
+  await page.getByRole('button', { name: '关闭弹窗' }).click();
+  await page.getByRole('button', { name: '打开管理面板' }).click();
+  await expect(page.getByRole('dialog', { name: '管理模式' })).toBeVisible();
 });
 
 // 桌面端覆盖管理员编辑便签后的保存链路。
@@ -48,6 +63,33 @@ test('桌面端管理员可编辑便签并保存', async ({ page }, testInfo) =>
   await expect(page.getByPlaceholder('输入便签正文')).toHaveValue('新的便签正文');
 });
 
+// 桌面端覆盖快捷新建弹窗中的便签发布链路。
+test('桌面端快捷新建弹窗可创建便签', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  const dialog = page.getByRole('dialog', { name: '快捷新建' });
+  await dialog.getByPlaceholder('标题，可留空').fill('桌面端新便签');
+  await dialog.getByPlaceholder('输入将要共享的文字').fill('从顶部入口直接写下一段内容');
+  await dialog.getByRole('button', { name: '发布文字' }).click();
+  await expect(page.getByRole('button', { name: /桌面端新便签/ })).toBeVisible();
+  await expect(dialog).toBeHidden();
+});
+
+// 桌面端覆盖快捷新建弹窗中的文件上传链路。
+test('桌面端快捷新建弹窗可上传文件', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  await page.locator('[data-testid="quick-create-file-input"]').setInputFiles({
+    name: 'meeting-note.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('hello'),
+  });
+  await expect(page.getByRole('button', { name: /meeting-note.txt/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '快捷新建' })).toBeHidden();
+});
+
 // 桌面端覆盖管理员重命名图片标题。
 test('桌面端管理员可重命名图片标题', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
@@ -59,6 +101,18 @@ test('桌面端管理员可重命名图片标题', async ({ page }, testInfo) =>
   await page.getByRole('button', { name: '保存更改' }).click();
   await expect(page.getByRole('button', { name: /封面图片/ })).toBeVisible();
   await expect(titleInput).toHaveValue('封面图片');
+});
+
+// 移动端覆盖顶部工具栏、主题切换和快捷新建弹窗可见性。
+test('移动端顶部工具栏仍可切换主题并打开快捷新建', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile');
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: '切换到深色主题' })).toBeVisible();
+  await page.getByRole('button', { name: '切换到深色主题' }).click();
+  await expect(page.getByRole('button', { name: '切换到浅色主题' })).toBeVisible();
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  await expect(page.getByRole('dialog', { name: '快捷新建' })).toBeVisible();
+  await expect(page.getByPlaceholder('输入将要共享的文字')).toBeVisible();
 });
 
 // 移动端覆盖内容优先布局下的管理员便签编辑链路。
@@ -75,8 +129,11 @@ test('移动端内容优先布局下仍可保存便签编辑', async ({ page }, 
 
 // unlockAdmin 输入管理员口令并解锁编辑能力。
 async function unlockAdmin(page: Parameters<typeof test.beforeEach>[0]['page']) {
-  await page.getByPlaceholder('输入管理口令').fill('lan-share-admin');
-  await page.getByRole('button', { name: '解锁管理能力' }).click();
+  await page.getByRole('button', { name: '打开管理面板' }).click();
+  const dialog = page.getByRole('dialog', { name: '管理模式' });
+  await dialog.getByPlaceholder('输入管理口令').fill('lan-share-admin');
+  await dialog.getByRole('button', { name: '解锁管理能力' }).click();
+  await expect(dialog).toBeHidden();
 }
 
 // installRoutes 为页面注入带状态的模拟 API 服务。

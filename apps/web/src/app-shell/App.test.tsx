@@ -58,18 +58,22 @@ async function TestAppThemeToggle() {
   renderApp();
   await screen.findByRole('region', { name: '共享列表' });
   expect(document.documentElement.dataset.theme).toBe('light');
-  await user.click(screen.getByRole('button', { name: '切换主题' }));
+  await user.click(screen.getByRole('button', { name: '切换到深色主题' }));
   expect(document.documentElement.dataset.theme).toBe('dark');
+  expect(screen.getByRole('button', { name: '切换到浅色主题' })).toBeInTheDocument();
 }
 
 test('主题切换可用', TestAppThemeToggle);
 
-// TestWorkspaceLayout 验证共享列表、过滤和内容画布语义都存在。
+// TestWorkspaceLayout 验证顶部操作、共享列表过滤和内容画布语义都存在。
 async function TestWorkspaceLayout() {
   const user = userEvent.setup();
   stubFetch(baseAssets);
   renderApp();
   const list = await screen.findByRole('region', { name: '共享列表' });
+  expect(screen.getByRole('toolbar', { name: '顶部操作' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '打开管理面板' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '打开快捷新建' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: '内容画布' })).toBeInTheDocument();
   expect(within(list).getByText('会议纪要')).toBeInTheDocument();
   await user.click(screen.getByRole('tab', { name: '图片', selected: false }));
@@ -77,7 +81,7 @@ async function TestWorkspaceLayout() {
   expect(within(list).getByText('客厅照片')).toBeInTheDocument();
 }
 
-test('备忘录式工作区支持过滤与内容画布', TestWorkspaceLayout);
+test('顶部操作区与工作区布局可用', TestWorkspaceLayout);
 
 // TestSnippetEditFlow 验证管理员可编辑便签标题和正文并同步更新列表与详情。
 async function TestSnippetEditFlow() {
@@ -101,6 +105,41 @@ async function TestSnippetEditFlow() {
 
 test('管理员可编辑便签并同步更新列表与详情', TestSnippetEditFlow);
 
+// TestQuickCreateSnippetFlow 验证快捷新建弹窗可以发布便签并自动关闭。
+async function TestQuickCreateSnippetFlow() {
+  const user = userEvent.setup();
+  const fetchMock = stubFetch(baseAssets);
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await openQuickCreate(user);
+  const dialog = screen.getByRole('dialog', { name: '快捷新建' });
+  await user.type(within(dialog).getByPlaceholderText('标题，可留空'), '新的共享便签');
+  await user.type(within(dialog).getByPlaceholderText('输入将要共享的文字'), '刚刚复制的一段内容');
+  await user.click(within(dialog).getByRole('button', { name: '发布文字' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/snippets', expect.objectContaining({ method: 'POST', credentials: 'include' })));
+  expect(screen.queryByRole('dialog', { name: '快捷新建' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /新的共享便签/ })).toBeInTheDocument();
+}
+
+test('快捷新建弹窗可创建便签并自动关闭', TestQuickCreateSnippetFlow);
+
+// TestQuickCreateUploadFlow 验证快捷新建弹窗中的上传入口仍可添加文件。
+async function TestQuickCreateUploadFlow() {
+  const user = userEvent.setup();
+  const fetchMock = stubFetch(baseAssets);
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await openQuickCreate(user);
+  const input = screen.getByTestId('quick-create-file-input');
+  const file = new File(['hello'], 'meeting-note.txt', { type: 'text/plain' });
+  await user.upload(input, file);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/files', expect.objectContaining({ method: 'POST', credentials: 'include' })));
+  expect(screen.queryByRole('dialog', { name: '快捷新建' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /meeting-note.txt/ })).toBeInTheDocument();
+}
+
+test('快捷新建弹窗可上传文件并进入共享流', TestQuickCreateUploadFlow);
+
 // TestImageRenameFlow 验证图片标题编辑后会同步影响列表与详情区。
 async function TestImageRenameFlow() {
   const user = userEvent.setup();
@@ -119,7 +158,7 @@ async function TestImageRenameFlow() {
 test('管理员重命名图片后列表与详情会同步更新', TestImageRenameFlow);
 
 // renderApp 挂载完整应用。
-function renderApp() {
+function renderApp(): ReturnType<typeof render> {
   return render(
     <ThemeProvider>
       <App />
@@ -127,13 +166,22 @@ function renderApp() {
   );
 }
 
-// unlockAdmin 通过输入口令进入管理态。
-async function unlockAdmin(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByPlaceholderText('输入管理口令'), 'lan-share-admin');
-  await user.click(screen.getByRole('button', { name: '解锁管理能力' }));
+// openQuickCreate 打开顶部快捷新建弹窗。
+async function openQuickCreate(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole('button', { name: '打开快捷新建' }));
+  await screen.findByRole('dialog', { name: '快捷新建' });
 }
 
-// stubFetch 按当前请求路径返回测试所需的资产数据并支持编辑更新。
+// unlockAdmin 通过输入口令进入管理态。
+async function unlockAdmin(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole('button', { name: '打开管理面板' }));
+  const dialog = await screen.findByRole('dialog', { name: '管理模式' });
+  await user.type(within(dialog).getByPlaceholderText('输入管理口令'), 'lan-share-admin');
+  await user.click(within(dialog).getByRole('button', { name: '解锁管理能力' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '管理模式' })).not.toBeInTheDocument());
+}
+
+// stubFetch 按当前请求路径返回测试所需的资产数据并支持创建、编辑与删除。
 function stubFetch(seedAssets: Asset[]) {
   const items = [...seedAssets];
   const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -143,6 +191,16 @@ function stubFetch(seedAssets: Asset[]) {
     }
     if (url === '/api/v1/admin/unlock') {
       return jsonResponse({ ok: true });
+    }
+    if (url === '/api/v1/assets/snippets' && init?.method === 'POST') {
+      const asset = createSnippetAsset(init.body);
+      items.unshift(asset);
+      return jsonResponse(asset, 201);
+    }
+    if (url === '/api/v1/assets/files' && init?.method === 'POST') {
+      const asset = createFileAsset(init.body);
+      items.unshift(asset);
+      return jsonResponse(asset, 201);
     }
     if (init?.method === 'PATCH') {
       return jsonResponse(updateExistingAsset(items, url.split('/').pop() ?? '', init.body));
@@ -174,6 +232,20 @@ function updateExistingAsset(items: Asset[], id: string, body: BodyInit | null |
   return next;
 }
 
+// createSnippetAsset 构造快捷新建便签后的测试资产对象。
+function createSnippetAsset(body: BodyInit | null | undefined): Asset {
+  const payload = JSON.parse(String(body ?? '{}')) as { title?: string; content?: string };
+  const content = payload.content ?? '';
+  return { id: `snippet-${Date.now()}`, kind: 'snippet', title: payload.title || '新便签', textContent: content, originalName: 'snippet.txt', mimeType: 'text/plain', sizeBytes: content.length, sha256: 'hash-created-snippet', previewKind: 'text', charCount: content.length, storageDriver: 'local', uploaderIp: '192.168.1.30', createdAt: '2026-04-20T08:00:00.000Z' };
+}
+
+// createFileAsset 构造快捷新建上传文件后的测试资产对象。
+function createFileAsset(body: BodyInit | null | undefined): Asset {
+  const file = body instanceof FormData ? body.get('file') : null;
+  const name = file instanceof File ? file.name : '新文件.txt';
+  return { id: `file-${Date.now()}`, kind: 'file', title: name, originalName: name, mimeType: file instanceof File ? file.type || 'application/octet-stream' : 'application/octet-stream', sizeBytes: file instanceof File ? file.size : 0, sha256: 'hash-created-file', previewKind: 'unsupported', storageDriver: 'local', uploaderIp: '192.168.1.31', createdAt: '2026-04-20T08:10:00.000Z' };
+}
+
 // applySnippetUpdate 把便签编辑请求映射为新的测试资产对象。
 function applySnippetUpdate(asset: Asset, payload: { title?: string; content?: string }): Asset {
   const content = payload.content ?? asset.textContent ?? '';
@@ -189,6 +261,6 @@ function removeAsset(items: Asset[], id: string) {
 }
 
 // jsonResponse 构造测试中使用的 JSON 响应对象。
-function jsonResponse(payload: unknown): Response {
-  return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
 }

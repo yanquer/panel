@@ -51,6 +51,10 @@ services:
   web:
     build:
       context: ./apps/web
+      args:
+        NPM_REGISTRY_PRIMARY: ${NPM_REGISTRY_PRIMARY:-https://registry.npmmirror.com}
+        NPM_REGISTRY_SECONDARY: ${NPM_REGISTRY_SECONDARY:-https://mirrors.cloud.tencent.com/npm/}
+        NPM_REGISTRY_TERTIARY: ${NPM_REGISTRY_TERTIARY:-https://registry.npmjs.org}
     depends_on:
       - api
     ports:
