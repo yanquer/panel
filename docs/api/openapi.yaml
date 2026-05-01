@@ -51,6 +51,7 @@ paths:
   /assets/files:
     post:
       summary: 上传图片或文件
+      description: 单文件默认最大 100 MiB，可通过 `MAX_UPLOAD_BYTES` 调整；生产 Web 代理需同步配置 `WEB_CLIENT_MAX_BODY_SIZE`。
       requestBody:
         required: true
         content:
@@ -69,6 +70,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Asset'
+        '413':
+          description: 上传文件超过服务允许的单文件大小
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /assets:
     get:
       summary: 获取资产列表
@@ -176,6 +183,11 @@ components:
       properties:
         ok:
           type: boolean
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
     UpdateAssetRequest:
       type: object
       required: [title]

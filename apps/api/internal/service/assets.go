@@ -60,9 +60,43 @@ type ContentResult struct {
 	Preview bool
 }
 
+const multipartUploadOverheadBytes int64 = 10 * 1024 * 1024
+
+// UploadReader 封装上传文件读取和单文件大小限制校验。
+type UploadReader struct {
+	maxBytes int64
+}
+
 // NewAssetService 创建资产服务并注入仓储与存储实现。
 func NewAssetService(repo AssetRepository, store storage.Store, driver domain.StorageDriver) AssetService {
 	return AssetService{repo: repo, store: store, driver: driver}
+}
+
+// NewUploadReader 创建带单文件大小限制的上传读取器。
+func NewUploadReader(maxBytes int64) UploadReader {
+	return UploadReader{maxBytes: maxBytes}
+}
+
+// MaxBytes 返回允许保存的单文件最大字节数。
+func (r UploadReader) MaxBytes() int64 {
+	return r.maxBytes
+}
+
+// MaxRequestBytes 返回 multipart 请求体读取保护上限。
+func (r UploadReader) MaxRequestBytes() int64 {
+	return r.maxBytes + multipartUploadOverheadBytes
+}
+
+// Read 在限制内读取上传文件内容，超出单文件上限时返回业务错误。
+func (r UploadReader) Read(reader io.Reader) ([]byte, error) {
+	payload, err := io.ReadAll(io.LimitReader(reader, r.maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(payload)) > r.maxBytes {
+		return nil, domain.ErrPayloadTooLarge
+	}
+	return payload, nil
 }
 
 // CreateSnippet 创建文字便签并把内容存入统一对象存储。
@@ -229,11 +263,6 @@ func sumSHA256(payload []byte) string {
 func storageKey(id string, originalName string) string {
 	ext := filepath.Ext(originalName)
 	return fmt.Sprintf("assets/%s%s", id, strings.ToLower(ext))
-}
-
-// ReadUpload 把请求体上传内容读取为字节切片，供 handler 复用。
-func ReadUpload(reader io.Reader) ([]byte, error) {
-	return io.ReadAll(reader)
 }
 
 // DownloadName 返回下载时推荐使用的文件名。

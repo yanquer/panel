@@ -57,5 +57,7 @@ services:
         NPM_REGISTRY_TERTIARY: ${NPM_REGISTRY_TERTIARY:-https://registry.npmjs.org}
     depends_on:
       - api
+    environment:
+      WEB_CLIENT_MAX_BODY_SIZE: ${WEB_CLIENT_MAX_BODY_SIZE:-110m}
     ports:
       - "${WEB_HOST_PORT:-4173}:80"

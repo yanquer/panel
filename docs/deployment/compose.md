@@ -41,6 +41,11 @@ docker compose up --build
 - API：默认不映射宿主机端口，由 `web` 同源代理 `/api`
 - MinIO：默认不映射宿主机端口，仅供内部服务使用
 
+## 上传大小限制
+- 后端默认单文件上限为 `MAX_UPLOAD_BYTES=104857600`，也就是 `100 MiB`
+- Web 容器 Nginx 默认 `WEB_CLIENT_MAX_BODY_SIZE=110m`，用于给 multipart 请求边界预留空间
+- 调整上传上限时，需要同时调整这两个变量并重新构建 / 重启服务
+
 ## 端口冲突处理
 - 如果宿主机 `4173` 已被占用，可在 `.env` 中覆盖：
   - `WEB_HOST_PORT`

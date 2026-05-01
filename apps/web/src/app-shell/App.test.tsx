@@ -1,5 +1,5 @@
 // 主页面测试文件用于验证备忘录式工作区、管理员编辑和列表详情同步，避免首页关键交互回归。
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { ThemeProvider } from '../theme/ThemeProvider';
@@ -50,6 +50,11 @@ const baseAssets: Asset[] = [
     createdAt: '2026-04-17T12:00:00.000Z',
   },
 ];
+
+interface FetchStubOptions {
+  uploadMessage?: string;
+  uploadStatus?: number;
+}
 
 // TestAppThemeToggle 验证主题切换仍然可用。
 async function TestAppThemeToggle() {
@@ -140,6 +145,57 @@ async function TestQuickCreateUploadFlow() {
 
 test('快捷新建弹窗可上传文件并进入共享流', TestQuickCreateUploadFlow);
 
+// TestQuickCreateDropUploadFlow 验证快捷新建弹窗中的拖拽入口仍可添加文件。
+async function TestQuickCreateDropUploadFlow() {
+  const user = userEvent.setup();
+  const fetchMock = stubFetch(baseAssets);
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await openQuickCreate(user);
+  const dialog = screen.getByRole('dialog', { name: '快捷新建' });
+  const dropzone = within(dialog).getByText('轻点选择，或直接拖进来').closest('label');
+  const file = new File(['hello'], 'drag-note.txt', { type: 'text/plain' });
+  expect(dropzone).not.toBeNull();
+  fireEvent.drop(dropzone as HTMLLabelElement, { dataTransfer: { files: [file] } });
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/files', expect.objectContaining({ method: 'POST', credentials: 'include' })));
+  expect(screen.queryByRole('dialog', { name: '快捷新建' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /drag-note.txt/ })).toBeInTheDocument();
+}
+
+test('快捷新建弹窗可拖拽上传文件并进入共享流', TestQuickCreateDropUploadFlow);
+
+// TestQuickCreateUploadTooLargeFlow 验证上传超限时会显示错误提示并保留弹窗。
+async function TestQuickCreateUploadTooLargeFlow() {
+  const user = userEvent.setup();
+  stubFetch(baseAssets, { uploadStatus: 413 });
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await openQuickCreate(user);
+  const input = screen.getByTestId('quick-create-file-input');
+  const file = new File(['oversize'], 'huge.zip', { type: 'application/zip' });
+  await user.upload(input, file);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('文件过大，单个文件不能超过 100 MiB。'));
+  expect(screen.getByRole('dialog', { name: '快捷新建' })).toBeInTheDocument();
+}
+
+test('快捷新建上传超限时显示错误提示并保留弹窗', TestQuickCreateUploadTooLargeFlow);
+
+// TestQuickCreateUploadServerFailureFlow 验证普通上传失败时会显示服务端错误提示并保留弹窗。
+async function TestQuickCreateUploadServerFailureFlow() {
+  const user = userEvent.setup();
+  stubFetch(baseAssets, { uploadMessage: '存储服务暂时不可用', uploadStatus: 500 });
+  renderApp();
+  await screen.findByRole('region', { name: '共享列表' });
+  await openQuickCreate(user);
+  const input = screen.getByTestId('quick-create-file-input');
+  const file = new File(['broken'], 'broken.txt', { type: 'text/plain' });
+  await user.upload(input, file);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('存储服务暂时不可用'));
+  expect(screen.getByRole('dialog', { name: '快捷新建' })).toBeInTheDocument();
+}
+
+test('快捷新建上传失败时显示错误提示并保留弹窗', TestQuickCreateUploadServerFailureFlow);
+
 // TestSnippetCopyFlow 验证文字资产在详情区和列表区都使用复制动作并显示成功提示。
 async function TestSnippetCopyFlow() {
   const user = userEvent.setup();
@@ -226,7 +282,7 @@ async function unlockAdmin(user: ReturnType<typeof userEvent.setup>): Promise<vo
 }
 
 // stubFetch 按当前请求路径返回测试所需的资产数据并支持创建、编辑与删除。
-function stubFetch(seedAssets: Asset[]) {
+function stubFetch(seedAssets: Asset[], options: FetchStubOptions = {}) {
   const items = [...seedAssets];
   const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
@@ -242,6 +298,9 @@ function stubFetch(seedAssets: Asset[]) {
       return jsonResponse(asset, 201);
     }
     if (url === '/api/v1/assets/files' && init?.method === 'POST') {
+      if (options.uploadStatus) {
+        return jsonResponse({ message: options.uploadMessage ?? 'payload too large' }, options.uploadStatus);
+      }
       const asset = createFileAsset(init.body);
       items.unshift(asset);
       return jsonResponse(asset, 201);

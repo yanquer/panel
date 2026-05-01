@@ -92,13 +92,50 @@ test('桌面端快捷新建弹窗可上传文件', async ({ page }, testInfo) =>
   test.skip(testInfo.project.name !== 'desktop');
   await page.goto('/');
   await page.getByRole('button', { name: '打开快捷新建' }).click();
-  await page.locator('[data-testid="quick-create-file-input"]').setInputFiles({
+  const fileChooserPromise = page.waitForEvent('filechooser');
+  await page.getByText('轻点选择，或直接拖进来').click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
     name: 'meeting-note.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('hello'),
   });
   await expect(page.getByRole('button', { name: /meeting-note.txt/ })).toBeVisible();
   await expect(page.getByRole('dialog', { name: '快捷新建' })).toBeHidden();
+});
+
+// 桌面端覆盖快捷新建弹窗中的拖拽上传链路。
+test('桌面端快捷新建弹窗可拖拽上传文件', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.goto('/');
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  const dialog = page.getByRole('dialog', { name: '快捷新建' });
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['hello'], 'drop-note.txt', { type: 'text/plain' }));
+    return transfer;
+  });
+  await dialog.locator('.dropzone').dispatchEvent('dragover', { dataTransfer });
+  await dialog.locator('.dropzone').dispatchEvent('drop', { dataTransfer });
+  await expect(page.getByRole('button', { name: /drop-note.txt/ })).toBeVisible();
+  await expect(dialog).toBeHidden();
+});
+
+// 桌面端覆盖上传超限时的错误提示和弹窗保留行为。
+test('桌面端快捷新建上传超限会显示提示', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.route('**/api/v1/assets/files', async (route) => {
+    await route.fulfill({ status: 413, body: '<html>too large</html>', headers: { 'Content-Type': 'text/html' } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: '打开快捷新建' }).click();
+  await page.locator('[data-testid="quick-create-file-input"]').setInputFiles({
+    name: 'huge.zip',
+    mimeType: 'application/zip',
+    buffer: Buffer.from('too large'),
+  });
+  await expect(page.getByRole('alert')).toContainText('文件过大，单个文件不能超过 100 MiB。');
+  await expect(page.getByRole('dialog', { name: '快捷新建' })).toBeVisible();
 });
 
 // 桌面端覆盖管理员重命名图片标题。

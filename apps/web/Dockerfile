@@ -27,6 +27,7 @@ RUN set -eu; \
     pnpm build
 
 FROM nginx:1.27-alpine
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+ENV WEB_CLIENT_MAX_BODY_SIZE=110m
+COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80

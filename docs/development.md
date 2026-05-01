@@ -34,9 +34,12 @@ pnpm --dir apps/web test:e2e
 - 文字资产在列表与详情区统一使用复制动作，成功或失败都通过顶部浮层反馈
 - 管理态解锁后支持编辑所有共享项标题，并支持编辑便签正文
 - 详情区保存采用显式提交，前端测试与端到端测试都需要覆盖保存成功后的列表同步
+- 文件上传默认单文件上限为 `100 MiB`，Nginx 代理默认 `WEB_CLIENT_MAX_BODY_SIZE=110m`，两者调整时需要同步验证 413 提示
+- 快捷新建上传入口由控制器类封装点击选择和拖拽上传，功能变更必须覆盖真实 file chooser、drop 与上传失败提示
 
 ## 环境变量
 - `DATABASE_URL`：PostgreSQL 连接串
+- `MAX_UPLOAD_BYTES`：后端允许保存的单文件最大字节数，默认 `104857600`
 - `GO_PROXY_PRIMARY` / `GO_PROXY_SECONDARY`：Docker 构建 Go 依赖时使用的两个模块镜像源
 - `GO_SUMDB`：Docker 构建时使用的 Go 校验服务地址
 - `NPM_REGISTRY_PRIMARY` / `NPM_REGISTRY_SECONDARY` / `NPM_REGISTRY_TERTIARY`：Docker 构建前端依赖时按顺序尝试的 npm registry
@@ -47,6 +50,7 @@ pnpm --dir apps/web test:e2e
 - `AUTH_SECRET`：Cookie 签名密钥
 - `MINIO_ENDPOINT` / `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`：MinIO 参数
 - `WEB_HOST_PORT`：Compose 对外暴露的前端宿主机端口
+- `WEB_CLIENT_MAX_BODY_SIZE`：Web 容器 Nginx 允许代理的请求体大小，默认 `110m`
 
 ## 开发约束
 - 新增函数尽量控制在 30 行内

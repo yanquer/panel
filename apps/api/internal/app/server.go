@@ -39,7 +39,7 @@ func NewServer(ctx context.Context, cfg config.Config) (*Server, error) {
 		return nil, err
 	}
 	assets := service.NewAssetService(repo, store, domain.StorageDriver(cfg.StorageDriver))
-	handler := httptransport.NewHandler(assets, auth.NewSessionManager(cfg.AdminPassword, cfg.AuthSecret))
+	handler := httptransport.NewHandler(assets, auth.NewSessionManager(cfg.AdminPassword, cfg.AuthSecret), cfg.MaxUploadBytes)
 	router := httptransport.NewRouter(handler)
 	return &Server{httpServer: &stdhttp.Server{Addr: cfg.ListenAddr, Handler: router, ReadHeaderTimeout: 5 * time.Second}, pool: pool}, nil
 }

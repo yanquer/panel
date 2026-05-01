@@ -120,7 +120,8 @@ export function useAssetWorkspace() {
       setState((current) => ({ ...current, busy: false, message: successMessage }));
       return result;
     } catch (error) {
-      setState((current) => ({ ...current, busy: false, message: getErrorMessage(error) }));
+      const message = getErrorMessage(error);
+      setState((current) => ({ ...current, busy: false, message, notice: { tone: 'error', message } }));
       throw error;
     }
   }

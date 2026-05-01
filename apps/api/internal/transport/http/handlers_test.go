@@ -124,12 +124,39 @@ func TestUploadAndList(t *testing.T) {
 	}
 }
 
+// TestUploadTooLarge 验证超过单文件上限的上传会返回 413。
+func TestUploadTooLarge(t *testing.T) {
+	router := newTestRouterWithMaxUploadBytes(t, 4)
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "large.txt")
+	_, _ = part.Write([]byte("hello"))
+	writer.Close()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/api/v1/assets/files", body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != stdhttp.StatusRequestEntityTooLarge {
+		t.Fatalf("expected request entity too large, got %d", response.Code)
+	}
+	payload := errorBody{}
+	_ = json.Unmarshal(response.Body.Bytes(), &payload)
+	if payload.Message != domain.ErrPayloadTooLarge.Error() {
+		t.Fatalf("unexpected error message: %s", payload.Message)
+	}
+}
+
 // newTestRouter 构造可直接用于接口测试的路由实例。
 func newTestRouter(t *testing.T) stdhttp.Handler {
+	return newTestRouterWithMaxUploadBytes(t, 104857600)
+}
+
+// newTestRouterWithMaxUploadBytes 构造带指定上传上限的接口测试路由。
+func newTestRouterWithMaxUploadBytes(t *testing.T, maxUploadBytes int64) stdhttp.Handler {
 	t.Helper()
 	repo := &testRepo{items: map[string]domain.Asset{}}
 	store := &testStore{items: map[string][]byte{}}
-	handler := NewHandler(service.NewAssetService(repo, store, domain.StorageDriverLocal), auth.NewSessionManager("secret", "token-secret"))
+	handler := NewHandler(service.NewAssetService(repo, store, domain.StorageDriverLocal), auth.NewSessionManager("secret", "token-secret"), maxUploadBytes)
 	return NewRouter(handler)
 }
 

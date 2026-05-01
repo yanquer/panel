@@ -410,7 +410,7 @@ dd {
 .button:not(:disabled):hover,
 .toolbar-button:not(:disabled):hover,
 .segmented button:hover,
-.dropzone:hover,
+.dropzone:not([data-busy='true']):hover,
 .note-list__row:hover,
 .modal-shell__close:hover {
   transform: translateY(-1px);
@@ -446,6 +446,7 @@ dd {
 .detail__title-input:focus,
 .detail__canvas-editor:focus,
 .dropzone:focus-visible,
+.dropzone:focus-within,
 .toolbar-button:focus-visible,
 .modal-shell__close:focus-visible {
   outline: none;
@@ -454,6 +455,7 @@ dd {
 }
 
 .dropzone {
+  position: relative;
   min-height: 188px;
   display: grid;
   align-content: center;
@@ -462,10 +464,21 @@ dd {
   border: 1.5px dashed var(--border-strong);
   border-radius: 26px;
   background: linear-gradient(180deg, var(--bg-subtle), transparent);
+  cursor: pointer;
   text-align: left;
+  overflow: hidden;
 }
 
-.dropzone:disabled,
+.dropzone__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.dropzone[data-busy='true'],
 .toolbar-button:disabled,
 .modal-shell__close:disabled {
   opacity: 0.5;

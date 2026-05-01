@@ -22,6 +22,7 @@ type Config struct {
 	MinioSecretKey  string
 	MinioUseSSL     bool
 	PublicAPIBase   string
+	MaxUploadBytes  int64
 }
 
 // Load 读取环境变量并整理为运行配置。
@@ -39,6 +40,7 @@ func Load() (Config, error) {
 		MinioAccessKey:  getEnv("MINIO_ROOT_USER", "minioadmin"),
 		MinioSecretKey:  getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		PublicAPIBase:   strings.TrimSuffix(getEnv("PUBLIC_API_BASE", "http://localhost:8080"), "/"),
+		MaxUploadBytes:  getInt64Env("MAX_UPLOAD_BYTES", 104857600),
 	}
 	useSSL, err := strconv.ParseBool(getEnv("MINIO_USE_SSL", "false"))
 	cfg.MinioUseSSL = err == nil && useSSL
@@ -53,6 +55,9 @@ func validate(cfg Config) error {
 	if cfg.StorageDriver != "local" && cfg.StorageDriver != "minio" {
 		return fmt.Errorf("unsupported storage driver: %s", cfg.StorageDriver)
 	}
+	if cfg.MaxUploadBytes <= 0 {
+		return fmt.Errorf("MAX_UPLOAD_BYTES must be greater than 0")
+	}
 	return nil
 }
 
@@ -63,4 +68,17 @@ func getEnv(key string, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// getInt64Env 读取 int64 环境变量并在缺失或非法时回落到默认值。
+func getInt64Env(key string, fallback int64) int64 {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }

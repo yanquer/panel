@@ -1,7 +1,8 @@
-# 该文件用于让前端静态站点与后端 API 在同源下访问，解决 Cookie 管理态与浏览器跨域问题。
+# 该模板用于生成前端静态站点与 API 反向代理配置，解决生产上传文件被 Nginx 默认 1MB 限制拦截的问题。
 server {
   listen 80;
   server_name _;
+  client_max_body_size ${WEB_CLIENT_MAX_BODY_SIZE};
 
   location /api/ {
     proxy_pass http://api:8080;

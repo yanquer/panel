@@ -2,6 +2,19 @@
 import type { Asset, AssetKind, AssetListResponse, UpdateAssetInput } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
+const UPLOAD_TOO_LARGE_MESSAGE = '文件过大，单个文件不能超过 100 MiB。';
+
+// ApiError 封装 API 状态码和错误文案，便于调用方展示明确失败原因。
+export class ApiError extends Error {
+  status: number;
+
+  // constructor 创建带 HTTP 状态码的 API 错误，方便界面按错误类型展示提示。
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
 
 // fetchAssets 获取资产列表并按类型执行可选过滤。
 export async function fetchAssets(kind: AssetKind | 'all'): Promise<Asset[]> {
@@ -49,9 +62,11 @@ export function contentUrl(id: string): string {
 
 // request 统一处理 JSON 请求、错误映射与凭证携带。
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(absoluteUrl(path), withDefaults(init));
+  const response = await fetch(absoluteUrl(path), withDefaults(init)).catch(() => {
+    throw new ApiError(0, '网络连接失败，请检查服务是否可用。');
+  });
   if (!response.ok) {
-    throw new Error(await readError(response));
+    throw new ApiError(response.status, await readError(response));
   }
   return response.json() as Promise<T>;
 }
@@ -80,6 +95,9 @@ function mergeHeaders(body: BodyInit | null | undefined, headers: HeadersInit | 
 
 // readError 读取服务端错误文案并回退到通用提示。
 async function readError(response: Response): Promise<string> {
+  if (response.status === 413) {
+    return UPLOAD_TOO_LARGE_MESSAGE;
+  }
   const payload = (await response.json().catch(() => null)) as { message?: string } | null;
   return payload?.message ?? '请求失败，请稍后重试';
 }

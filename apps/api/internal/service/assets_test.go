@@ -47,6 +47,22 @@ func TestCreateFile(t *testing.T) {
 	}
 }
 
+// TestUploadReaderLimit 验证上传读取器允许边界大小并拒绝超限文件。
+func TestUploadReaderLimit(t *testing.T) {
+	reader := NewUploadReader(4)
+	payload, err := reader.Read(bytes.NewReader([]byte("test")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(payload) != "test" {
+		t.Fatalf("unexpected payload: %s", string(payload))
+	}
+	_, err = reader.Read(bytes.NewReader([]byte("hello")))
+	if !errors.Is(err, domain.ErrPayloadTooLarge) {
+		t.Fatalf("unexpected limit error: %v", err)
+	}
+}
+
 // TestOpenPreviewBlocked 验证不可预览文件在预览接口会被拦截。
 func TestOpenPreviewBlocked(t *testing.T) {
 	svc := newTestService()

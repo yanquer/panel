@@ -3,8 +3,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	stdhttp "net/http"
 	"strings"
 	"time"
@@ -15,8 +17,9 @@ import (
 )
 
 type Handler struct {
-	assets  service.AssetService
-	session auth.SessionManager
+	assets       service.AssetService
+	session      auth.SessionManager
+	uploadReader service.UploadReader
 }
 
 type unlockRequest struct {
@@ -34,8 +37,8 @@ type updateAssetRequest struct {
 }
 
 // NewHandler 创建 API 处理器并注入业务依赖。
-func NewHandler(assets service.AssetService, session auth.SessionManager) Handler {
-	return Handler{assets: assets, session: session}
+func NewHandler(assets service.AssetService, session auth.SessionManager, maxUploadBytes int64) Handler {
+	return Handler{assets: assets, session: session, uploadReader: service.NewUploadReader(maxUploadBytes)}
 }
 
 // Unlock 校验管理口令并写入管理态 Cookie。
@@ -70,19 +73,37 @@ func (h Handler) CreateSnippet(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 
 // CreateFile 处理图片和文件上传请求。
 func (h Handler) CreateFile(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	sourceIP := clientIP(r)
+	r.Body = stdhttp.MaxBytesReader(w, r.Body, h.uploadReader.MaxRequestBytes())
 	file, header, err := r.FormFile("file")
 	if err != nil {
+		if isRequestTooLarge(err) {
+			log.Printf("upload rejected source=%s reason=request_too_large max_bytes=%d", sourceIP, h.uploadReader.MaxBytes())
+			writeError(w, domain.ErrPayloadTooLarge)
+			return
+		}
+		log.Printf("upload invalid source=%s error=%v", sourceIP, err)
 		writeError(w, domain.ErrInvalidInput)
 		return
 	}
 	defer file.Close()
-	payload, err := service.ReadUpload(file)
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
+	}
+	payload, err := h.uploadReader.Read(file)
 	if err != nil {
+		if errors.Is(err, domain.ErrPayloadTooLarge) {
+			log.Printf("upload rejected source=%s file=%q reason=file_too_large max_bytes=%d", sourceIP, header.Filename, h.uploadReader.MaxBytes())
+		} else {
+			log.Printf("upload read failed source=%s file=%q error=%v", sourceIP, header.Filename, err)
+		}
 		writeError(w, err)
 		return
 	}
-	asset, err := h.assets.CreateFile(r.Context(), service.CreateFileInput{FileName: header.Filename, Content: payload, UploaderIP: clientIP(r)})
+	log.Printf("upload accepted source=%s file=%q size_bytes=%d", sourceIP, header.Filename, len(payload))
+	asset, err := h.assets.CreateFile(r.Context(), service.CreateFileInput{FileName: header.Filename, Content: payload, UploaderIP: sourceIP})
 	if err != nil {
+		log.Printf("upload persist failed source=%s file=%q size_bytes=%d error=%v", sourceIP, header.Filename, len(payload), err)
 		writeError(w, err)
 		return
 	}
@@ -183,6 +204,12 @@ func parseListFilter(r *stdhttp.Request) domain.ListFilter {
 	}
 	value := domain.AssetKind(kind)
 	return domain.ListFilter{Kind: &value}
+}
+
+// isRequestTooLarge 判断 multipart 请求是否在读取阶段超过 HTTP 请求体上限。
+func isRequestTooLarge(err error) bool {
+	var maxBytesError *stdhttp.MaxBytesError
+	return errors.As(err, &maxBytesError)
 }
 
 // clientIP 提取当前请求来源 IP 便于展示上传来源。

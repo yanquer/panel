@@ -4,8 +4,9 @@ package domain
 import "errors"
 
 var (
-	ErrUnauthorized   = errors.New("unauthorized")
-	ErrInvalidInput   = errors.New("invalid input")
-	ErrAssetNotFound  = errors.New("asset not found")
-	ErrPreviewBlocked = errors.New("preview blocked")
+	ErrUnauthorized    = errors.New("unauthorized")
+	ErrInvalidInput    = errors.New("invalid input")
+	ErrAssetNotFound   = errors.New("asset not found")
+	ErrPreviewBlocked  = errors.New("preview blocked")
+	ErrPayloadTooLarge = errors.New("payload too large")
 )

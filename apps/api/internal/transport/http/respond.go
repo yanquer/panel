@@ -36,6 +36,8 @@ func mapStatus(err error) int {
 		return stdhttp.StatusNotFound
 	case errors.Is(err, domain.ErrPreviewBlocked):
 		return stdhttp.StatusUnsupportedMediaType
+	case errors.Is(err, domain.ErrPayloadTooLarge):
+		return stdhttp.StatusRequestEntityTooLarge
 	default:
 		return stdhttp.StatusInternalServerError
 	}
